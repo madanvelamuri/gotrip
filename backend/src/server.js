@@ -7,7 +7,7 @@ import pricingRoutes from "./routes/pricing.js";
 import bookingRoutes from "./routes/bookings.js";
 import adminRoutes from "./routes/admin.js";
 import locationRoutes from "./routes/locations.js";
-import supportRoutes from "./routes/support.js"; // <--- Support & Feedback routes imported
+import supportRoutes from "./routes/support.js";
 
 dotenv.config();
 
@@ -15,15 +15,28 @@ const app = express();
 
 /*
 ========================================
-CORS CONFIGURATION
+CORS CONFIGURATION (UPDATED FOR PRODUCTION)
 ========================================
 */
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://gotrip-phi.vercel.app", // Your live Vercel frontend domain
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, or Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new Error("CORS policy violation: This origin is not allowed."), false);
+      }
+      return callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
@@ -67,16 +80,11 @@ API ROUTES
 */
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/pricing", pricingRoutes);
-
 app.use("/api/bookings", bookingRoutes);
-
 app.use("/api/admin", adminRoutes);
-
 app.use("/api/location", locationRoutes);
-
-app.use("/api/support", supportRoutes); // <--- Support & Feedback endpoint registered
+app.use("/api/support", supportRoutes);
 
 /*
 ========================================
