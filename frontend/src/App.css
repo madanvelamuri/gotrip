@@ -1,0 +1,457 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #171717;
+  background: #f7f7f7;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar,
+.dashboardNav {
+  width: 100%;
+  min-height: 72px;
+  padding: 0 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.logo,
+.dashboardNav strong {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.logo span,
+.dashboardNav strong span {
+  color: #ff4d4f;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navLinks button,
+.dashboardNav button {
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.navLinks button:hover,
+.dashboardNav button:hover {
+  color: #ff4d4f;
+}
+
+.signinButton {
+  border: 1px solid #dddddd !important;
+  border-radius: 10px;
+  background: #ffffff !important;
+}
+
+.signupButton,
+.primaryButton {
+  border: none !important;
+  border-radius: 10px;
+  background: #ff4d4f !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.signupButton:hover,
+.primaryButton:hover {
+  background: #e94446 !important;
+}
+
+.userName {
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* =========================
+   HOME
+========================= */
+
+.hero {
+  min-height: 620px;
+  padding: 100px 7%;
+  display: flex;
+  align-items: center;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255,255,255,0.96),
+      rgba(255,255,255,0.65),
+      rgba(255,255,255,0.15)
+    ),
+    url("./assets/hero.png") center/cover no-repeat;
+}
+
+.hero h1 {
+  font-size: 68px;
+  line-height: 1.05;
+  margin: 20px 0;
+  max-width: 750px;
+}
+
+.heroText {
+  font-size: 20px;
+  line-height: 1.6;
+  max-width: 600px;
+  color: #666;
+}
+
+.eyebrow {
+  color: #ff4d4f;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+
+.hero .primaryButton {
+  margin-top: 20px;
+  padding: 16px 28px;
+  font-size: 17px;
+}
+
+/* =========================
+   PRICING
+========================= */
+
+.pricing {
+  padding: 80px 7%;
+  text-align: center;
+  background: #ffffff;
+}
+
+.pricing h2 {
+  font-size: 38px;
+  margin-bottom: 10px;
+}
+
+.pricing > p {
+  color: #777;
+  margin-bottom: 40px;
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(250px, 350px));
+  justify-content: center;
+  gap: 25px;
+}
+
+.priceCard {
+  padding: 35px;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.priceCard h3 {
+  font-size: 22px;
+}
+
+.priceCard strong {
+  font-size: 32px;
+}
+
+.priceCard span {
+  color: #777;
+}
+
+.vehicleIcon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+/* =========================
+   DASHBOARD
+========================= */
+
+.dashboardNav {
+  padding: 0 5%;
+}
+
+.dashboardNav > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboardNav > div > span {
+  margin-right: 10px;
+  font-weight: 600;
+}
+
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 30px;
+}
+
+.bookingBox {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 45px;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.07);
+}
+
+.bookingBox h1 {
+  font-size: 42px;
+  margin: 10px 0 35px;
+}
+
+.routeForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 18px;
+  align-items: end;
+}
+
+.routeForm label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.routeForm input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  font-size: 16px;
+  outline: none;
+}
+
+.routeForm input:focus {
+  border-color: #ff4d4f;
+}
+
+.routeForm .primaryButton {
+  height: 52px;
+  padding: 0 30px;
+  cursor: pointer;
+}
+
+/* =========================
+   SEARCH RESULTS
+========================= */
+
+.results {
+  margin-top: 35px;
+}
+
+.routeSummary {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 25px;
+  background: #171717;
+  color: #ffffff;
+  border-radius: 14px;
+  font-size: 18px;
+}
+
+.routeSummary span:last-child {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.results h2 {
+  margin: 35px 0 20px;
+  font-size: 30px;
+}
+
+.vehicleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.vehicleCard {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 18px;
+  border: 1px solid #eeeeee;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+}
+
+.vehicleCard h3 {
+  font-size: 22px;
+  margin: 10px 0;
+}
+
+.vehicleCard p {
+  color: #777;
+}
+
+.fare {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 20px 0;
+}
+
+.full {
+  width: 100%;
+  padding: 14px;
+  cursor: pointer;
+}
+
+/* =========================
+   COMMON PAGES
+========================= */
+
+.page {
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+.content {
+  max-width: 1100px;
+  margin: auto;
+  padding: 50px 30px;
+}
+
+.content h1 {
+  font-size: 38px;
+}
+
+.empty {
+  padding: 40px;
+  background: #ffffff;
+  border-radius: 15px;
+  color: #777;
+}
+
+.bookingCard {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1fr 0.7fr 0.7fr;
+  gap: 20px;
+  align-items: center;
+  background: #ffffff;
+  padding: 22px;
+  margin-bottom: 15px;
+  border-radius: 14px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+.bookingCard p {
+  margin: 8px 0 0;
+  color: #666;
+}
+
+.profileCard {
+  background: #ffffff;
+  padding: 30px;
+  max-width: 600px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+}
+
+.error {
+  background: #ffe5e5;
+  color: #c00;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+/* =========================
+   ADMIN
+========================= */
+
+.adminTable {
+  background: #ffffff;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1.5fr 1fr 0.8fr 0.8fr;
+  gap: 15px;
+  padding: 18px;
+  align-items: center;
+}
+
+.tableHeader {
+  background: #171717;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.tableRow {
+  border-bottom: 1px solid #eeeeee;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 800px) {
+
+  .navLinks {
+    gap: 3px;
+  }
+
+  .navLinks button {
+    padding: 8px;
+  }
+
+  .hero {
+    padding: 70px 25px;
+  }
+
+  .hero h1 {
+    font-size: 45px;
+  }
+
+  .routeForm {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingCard {
+    grid-template-columns: 1fr;
+  }
+
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardNav {
+    padding: 15px 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .dashboardNav > div {
+    flex-wrap: wrap;
+  }
+}

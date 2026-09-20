@@ -1,0 +1,657 @@
+﻿import { useState } from "react";
+import "./App.css";
+
+const locations = [
+  "Chennai",
+  "Bangalore",
+  "Hyderabad",
+  "Coimbatore",
+  "Madurai",
+  "Trichy",
+  "Salem",
+  "Pondicherry",
+  "Tirunelveli",
+  "Kochi",
+];
+
+function App() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [results, setResults] = useState(null);
+
+  const [showLogin, setShowLogin] = useState(false);
+  const [authMode, setAuthMode] = useState("signin");
+
+  const [vehicle, setVehicle] = useState("5 Seater");
+
+  const suggestions = (value) => {
+    if (!value) return [];
+
+    return locations
+      .filter((location) =>
+        location.toLowerCase().includes(value.toLowerCase())
+      )
+      .slice(0, 5);
+  };
+
+  const calculateDistance = () => {
+    if (!from || !to) {
+      alert("Please enter From and To locations.");
+      return;
+    }
+
+    if (from.toLowerCase() === to.toLowerCase()) {
+      alert("From and To locations cannot be the same.");
+      return;
+    }
+
+    /*
+      Demo distance for now.
+
+      Later this will be replaced with
+      Google Maps / Map API distance calculation.
+    */
+    const distance = 350;
+
+    setResults({
+      from,
+      to,
+      distance,
+    });
+  };
+
+  const calculateFare = () => {
+    if (!results) return 0;
+
+    const rate = vehicle === "5 Seater" ? 10 : 14;
+
+    return results.distance * rate;
+  };
+
+  return (
+    <div className="app">
+
+      {/* NAVBAR */}
+
+      <header className="navbar">
+        <div className="logo">
+          Go<span>Trip</span>
+        </div>
+
+        <nav className="navLinks">
+          <a href="#home">Home</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#about">About</a>
+
+          <button
+            className="signinButton"
+            onClick={() => {
+              setAuthMode("signin");
+              setShowLogin(true);
+            }}
+          >
+            Sign In
+          </button>
+
+          <button
+            className="signupButton"
+            onClick={() => {
+              setAuthMode("signup");
+              setShowLogin(true);
+            }}
+          >
+            Sign Up
+          </button>
+        </nav>
+      </header>
+
+
+      {/* HERO */}
+
+      <section id="home" className="heroSection">
+
+        <div className="heroOverlay">
+
+          <div className="heroContent">
+
+            <div className="badge">
+              OUTSTATION TRAVEL
+            </div>
+
+            <h1>
+              Travel Anywhere.
+              <br />
+              <span>We Take You There.</span>
+            </h1>
+
+            <p>
+              Comfortable and reliable outstation cab services
+              for your next journey.
+            </p>
+
+            <button
+              className="heroButton"
+              onClick={() => {
+                document
+                  .getElementById("booking")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              Book Your Trip
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* DASHBOARD */}
+
+      <main className="dashboard" id="booking">
+
+        <section className="bookingBox">
+
+          <div className="sectionTitle">
+            <div>
+              <small>PLAN YOUR JOURNEY</small>
+
+              <h2>
+                Where are you going?
+              </h2>
+            </div>
+
+            <div className="outstationBadge">
+              Outstation
+            </div>
+          </div>
+
+
+          <div className="routeForm">
+
+            {/* FROM */}
+
+            <div className="inputGroup">
+
+              <label>
+                FROM
+              </label>
+
+              <div className="inputWrapper">
+                <span>ðŸ“</span>
+
+                <input
+                  type="text"
+                  placeholder="Enter pickup location"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setResults(null);
+                  }}
+                />
+              </div>
+
+              {from && suggestions(from).length > 0 && (
+
+                <div className="suggestions">
+
+                  {suggestions(from).map((location) => (
+
+                    <div
+                      key={location}
+                      className="suggestion"
+                      onClick={() => setFrom(location)}
+                    >
+                      ðŸ“ {location}
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </div>
+
+
+            {/* SWAP */}
+
+            <button
+              className="swapButton"
+              onClick={() => {
+                const oldFrom = from;
+                setFrom(to);
+                setTo(oldFrom);
+                setResults(null);
+              }}
+            >
+              â‡„
+            </button>
+
+
+            {/* TO */}
+
+            <div className="inputGroup">
+
+              <label>
+                TO
+              </label>
+
+              <div className="inputWrapper">
+                <span>ðŸ“</span>
+
+                <input
+                  type="text"
+                  placeholder="Enter destination"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setResults(null);
+                  }}
+                />
+              </div>
+
+              {to && suggestions(to).length > 0 && (
+
+                <div className="suggestions">
+
+                  {suggestions(to).map((location) => (
+
+                    <div
+                      key={location}
+                      className="suggestion"
+                      onClick={() => setTo(location)}
+                    >
+                      ðŸ“ {location}
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </div>
+
+
+            {/* SEARCH */}
+
+            <button
+              className="searchButton"
+              onClick={calculateDistance}
+            >
+              Search
+            </button>
+
+          </div>
+
+
+          {/* RESULTS */}
+
+          {results && (
+
+            <section className="results">
+
+              <div className="routeSummary">
+
+                <div>
+                  <small>FROM</small>
+                  <strong>{results.from}</strong>
+                </div>
+
+                <div className="routeArrow">
+                  â†’
+                </div>
+
+                <div>
+                  <small>TO</small>
+                  <strong>{results.to}</strong>
+                </div>
+
+                <div className="distance">
+
+                  <small>DISTANCE</small>
+
+                  <strong>
+                    {results.distance} KM
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              <h3>
+                Select Your Vehicle
+              </h3>
+
+
+              <div className="vehicleGrid">
+
+                {/* 5 SEATER */}
+
+                <div
+                  className={`vehicleCard ${
+                    vehicle === "5 Seater" ? "selected" : ""
+                  }`}
+                  onClick={() => setVehicle("5 Seater")}
+                >
+
+                  <div className="vehicleTop">
+                    <div className="vehicleIcon">
+                      ðŸš—
+                    </div>
+
+                    {vehicle === "5 Seater" && (
+                      <div className="selectedBadge">
+                        Selected
+                      </div>
+                    )}
+                  </div>
+
+                  <h4>
+                    5 Seater
+                  </h4>
+
+                  <p>
+                    Comfortable car
+                  </p>
+
+                  <div className="rate">
+                    â‚¹10 <span>/ KM</span>
+                  </div>
+
+                  <div className="fare">
+                    â‚¹{(results.distance * 10).toLocaleString("en-IN")}
+                  </div>
+
+                </div>
+
+
+                {/* 7 SEATER */}
+
+                <div
+                  className={`vehicleCard ${
+                    vehicle === "7 Seater" ? "selected" : ""
+                  }`}
+                  onClick={() => setVehicle("7 Seater")}
+                >
+
+                  <div className="vehicleTop">
+                    <div className="vehicleIcon">
+                      ðŸš
+                    </div>
+
+                    {vehicle === "7 Seater" && (
+                      <div className="selectedBadge">
+                        Selected
+                      </div>
+                    )}
+                  </div>
+
+                  <h4>
+                    7 Seater
+                  </h4>
+
+                  <p>
+                    Spacious family vehicle
+                  </p>
+
+                  <div className="rate">
+                    â‚¹14 <span>/ KM</span>
+                  </div>
+
+                  <div className="fare">
+                    â‚¹{(results.distance * 14).toLocaleString("en-IN")}
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="bookingAction">
+
+                <div>
+
+                  <span>
+                    Estimated Fare
+                  </span>
+
+                  <strong>
+                    â‚¹{calculateFare().toLocaleString("en-IN")}
+                  </strong>
+
+                </div>
+
+                <button
+                  className="bookButton"
+                  onClick={() => {
+                    if (!showLogin) {
+                      setAuthMode("signin");
+                      setShowLogin(true);
+                    }
+                  }}
+                >
+                  Continue Booking â†’
+                </button>
+
+              </div>
+
+            </section>
+
+          )}
+
+        </section>
+
+      </main>
+
+
+      {/* PRICING */}
+
+      <section
+        id="pricing"
+        className="pricingSection"
+      >
+
+        <div className="sectionHeading">
+
+          <small>
+            SIMPLE PRICING
+          </small>
+
+          <h2>
+            Outstation Fare
+          </h2>
+
+          <p>
+            Transparent per-kilometre pricing.
+          </p>
+
+        </div>
+
+
+        <div className="pricingGrid">
+
+          <div className="priceCard">
+
+            <div className="priceIcon">
+              ðŸš—
+            </div>
+
+            <h3>
+              5 Seater
+            </h3>
+
+            <strong>
+              â‚¹10
+            </strong>
+
+            <span>
+              / KM
+            </span>
+
+            <p>
+              Ideal for small families
+              and comfortable trips.
+            </p>
+
+          </div>
+
+
+          <div className="priceCard featured">
+
+            <div className="popular">
+              POPULAR
+            </div>
+
+            <div className="priceIcon">
+              ðŸš
+            </div>
+
+            <h3>
+              7 Seater
+            </h3>
+
+            <strong>
+              â‚¹14
+            </strong>
+
+            <span>
+              / KM
+            </span>
+
+            <p>
+              Extra space for families
+              and group travel.
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* FOOTER */}
+
+      <footer id="about">
+
+        <div className="footerLogo">
+          Go<span>Trip</span>
+        </div>
+
+        <p>
+          Reliable outstation travel made simple.
+        </p>
+
+        <p className="copyright">
+          Â© 2026 GoTrip. All rights reserved.
+        </p>
+
+      </footer>
+
+
+      {/* AUTH MODAL */}
+
+      {showLogin && (
+
+        <div
+          className="modalBackground"
+          onClick={() => setShowLogin(false)}
+        >
+
+          <div
+            className="authModal"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            <button
+              className="closeButton"
+              onClick={() => setShowLogin(false)}
+            >
+              Ã—
+            </button>
+
+            <div className="authLogo">
+              Go<span>Trip</span>
+            </div>
+
+            <h2>
+              {authMode === "signin"
+                ? "Welcome back"
+                : "Create your account"}
+            </h2>
+
+            <p>
+              {authMode === "signin"
+                ? "Sign in to continue your booking."
+                : "Create an account to book your trips."}
+            </p>
+
+
+            <button className="googleButton">
+              <span>G</span>
+              Continue with Google
+            </button>
+
+
+            <div className="or">
+              <span></span>
+              OR
+              <span></span>
+            </div>
+
+
+            <label>
+              Mobile Number
+            </label>
+
+            <input
+              className="authInput"
+              type="tel"
+              placeholder="+91 XXXXX XXXXX"
+            />
+
+
+            <button className="authContinue">
+              {authMode === "signin"
+                ? "Sign In"
+                : "Create Account"}
+            </button>
+
+
+            <div className="authSwitch">
+
+              {authMode === "signin"
+                ? "Don't have an account?"
+                : "Already have an account?"}
+
+              <button
+                onClick={() =>
+                  setAuthMode(
+                    authMode === "signin"
+                      ? "signup"
+                      : "signin"
+                  )
+                }
+              >
+                {authMode === "signin"
+                  ? "Sign Up"
+                  : "Sign In"}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+  );
+}
+
+export default App;

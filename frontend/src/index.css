@@ -1,0 +1,689 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  color: #151515;
+  background: #f7f7f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f7f7f5;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button,
+input {
+  outline: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+/* AUTH IMPROVEMENTS */
+
+.authHeader {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.authLogo {
+  font-size: 30px;
+  font-weight: 900;
+  margin-bottom: 15px;
+}
+
+.authLogo span,
+.logo span {
+  color: #ff4b50;
+}
+
+.authHeader h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.authHeader p {
+  margin: 0;
+  color: #777;
+}
+
+.authCard label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.authCard form input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 9px;
+  outline: none;
+}
+
+.authCard form input:focus {
+  border-color: #ff4b50;
+}
+
+.signinButton {
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid #ddd;
+  font-weight: 700;
+}
+
+.signinButton:hover {
+  background: #f7f7f7;
+}
+
+.authSwitch {
+  text-align: center;
+  margin-top: 22px;
+  color: #666;
+}
+
+.authSwitch button {
+  border: 0;
+  background: none;
+  color: #ff4b50;
+  font-weight: 800;
+  margin-left: 5px;
+}
+
+.success {
+  padding: 12px;
+  margin: 10px 0;
+  background: #e8fff0;
+  color: #08752e;
+  border-radius: 8px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  color: #999;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
+.googleButton {
+  cursor: pointer;
+}
+/* =========================================
+   MY BOOKINGS PAGE
+========================================= */
+
+.bookingsPage {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 55px 0 80px;
+}
+
+/* HEADER */
+
+.bookingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 30px;
+  margin-bottom: 35px;
+}
+
+.bookingsEyebrow {
+  display: inline-block;
+  color: #ff4d52;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+}
+
+.bookingsHeader h1 {
+  margin: 0;
+  font-size: 46px;
+  line-height: 1.1;
+  color: #171717;
+}
+
+.bookingsHeader p {
+  margin: 12px 0 0;
+  color: #777;
+  font-size: 16px;
+}
+
+.newBookingButton {
+  border: none;
+  background: #ff4d52;
+  color: white;
+  padding: 15px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.newBookingButton:hover {
+  background: #e93e44;
+  transform: translateY(-1px);
+}
+
+/* SUMMARY */
+
+.bookingSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.summaryCard {
+  background: white;
+  border: 1px solid #eeeeee;
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.summaryIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fff0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+
+.summaryCard div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summaryCard strong {
+  font-size: 23px;
+  color: #151515;
+}
+
+.summaryCard span {
+  color: #777;
+  font-size: 13px;
+}
+
+/* FILTERS */
+
+.bookingFilters {
+  background: white;
+  border: 1px solid #eeeeee;
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.bookingSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 46px;
+  flex: 1;
+  max-width: 480px;
+}
+
+.bookingSearch span {
+  color: #888;
+  font-size: 24px;
+}
+
+.bookingSearch input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  background: transparent;
+}
+
+.statusFilters {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.filterButton {
+  border: none;
+  background: #f5f5f5;
+  color: #555;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  background: #eeeeee;
+}
+
+.filterButton.active {
+  background: #171717;
+  color: white;
+}
+
+/* BOOKING CARD */
+
+.bookingList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.bookingCard {
+  background: white;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+  padding: 25px 28px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.045);
+  transition: 0.2s;
+}
+
+.bookingCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* CARD TOP */
+
+.bookingCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.bookingReference {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bookingReference span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #999;
+}
+
+.bookingReference strong {
+  font-size: 15px;
+  color: #171717;
+}
+
+/* STATUS */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 30px;
+  background: #f1f1f1;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status.confirmed {
+  background: #eaf8ef;
+  color: #18864b;
+}
+
+.status.completed {
+  background: #edf3ff;
+  color: #3768c7;
+}
+
+.status.cancelled {
+  background: #fff0f0;
+  color: #d83c42;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ROUTE */
+
+.bookingRoute {
+  display: grid;
+  grid-template-columns: 1fr 100px 1fr;
+  align-items: center;
+  padding: 25px 0;
+}
+
+.locationBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.destinationBlock {
+  text-align: right;
+}
+
+.locationLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: #999;
+  letter-spacing: 1.5px;
+}
+
+.locationBlock strong {
+  font-size: 19px;
+  color: #171717;
+}
+
+.routeLine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.routeCircle {
+  width: 10px;
+  height: 10px;
+  border: 3px solid #ff4d52;
+  border-radius: 50%;
+}
+
+.routeCircle.destination {
+  background: #ff4d52;
+}
+
+.routeArrow {
+  color: #ff4d52;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* DETAILS */
+
+.bookingDetails {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  padding: 20px 0;
+  border-top: 1px solid #eeeeee;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.bookingDetail {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.detailIcon {
+  width: 38px;
+  height: 38px;
+  background: #f7f7f7;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.bookingDetail div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bookingDetail div span {
+  font-size: 11px;
+  color: #999;
+}
+
+.bookingDetail div strong {
+  font-size: 14px;
+  color: #222;
+}
+
+.fareDetail div strong {
+  font-size: 17px;
+}
+
+/* FOOTER */
+
+.bookingCardFooter {
+  padding-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fareInfo {
+  color: #888;
+  font-size: 12px;
+}
+
+.detailsButton {
+  border: 1px solid #222;
+  background: white;
+  color: #222;
+  padding: 10px 17px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  transition: 0.2s;
+}
+
+.detailsButton:hover {
+  background: #171717;
+  color: white;
+}
+
+/* EMPTY / ERROR */
+
+.bookingMessage {
+  background: white;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+  padding: 65px 20px;
+  text-align: center;
+}
+
+.bookingMessage h3 {
+  margin: 15px 0 8px;
+  font-size: 21px;
+}
+
+.bookingMessage p {
+  margin: 0 0 20px;
+  color: #777;
+}
+
+.emptyIcon {
+  font-size: 42px;
+}
+
+.messageIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #fff0f0;
+  color: #ff4d52;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.retryButton {
+  border: none;
+  background: #171717;
+  color: white;
+  padding: 11px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.loadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #eeeeee;
+  border-top-color: #ff4d52;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: bookingSpin 0.8s linear infinite;
+}
+
+@keyframes bookingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 850px) {
+
+  .bookingsPage {
+    width: min(100% - 25px, 700px);
+    padding-top: 35px;
+  }
+
+  .bookingsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bookingsHeader h1 {
+    font-size: 36px;
+  }
+
+  .bookingSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingFilters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bookingSearch {
+    max-width: none;
+  }
+
+  .statusFilters {
+    justify-content: flex-start;
+  }
+
+  .bookingRoute {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .destinationBlock {
+    text-align: left;
+  }
+
+  .routeLine {
+    justify-content: flex-start;
+  }
+
+  .bookingDetails {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 550px) {
+
+  .bookingCard {
+    padding: 20px;
+  }
+
+  .bookingCardTop {
+    gap: 10px;
+  }
+
+  .bookingDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingCardFooter {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .detailsButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+}
