@@ -35,10 +35,12 @@ async function sendEmailOtp(toEmail, otpCode) {
     console.log(`📧 [RESEND SUCCESS] Live email dispatched successfully to ${toEmail}`);
     return { success: true };
   } catch (err) {
-    console.error("🚨 RESEND FAILED WITH ERROR:", err.message);
-    console.log(`\n================================`);
-    console.log(`📧 [FALLBACK EMAIL] OTP for ${toEmail}: ${otpCode}`);
-    console.log(`================================\n`);
+    // FIX: Safely catch Resend API errors (like 403 free-tier restrictions) and provide console fallback
+    console.error("🚨 RESEND FAILED WITH ERROR:", err.message || err);
+    console.log(`\n==================================================`);
+    console.log(`📧 [FALLBACK OTP CODE] For ${toEmail}: ${otpCode}`);
+    console.log(`(Note: Resend free tier restricts external emails until domain is verified)`);
+    console.log(`==================================================\n`);
     return { success: true };
   }
 }
@@ -112,7 +114,7 @@ router.post("/signup-send-otp", async (req, res) => {
       password
     });
 
-    // Trigger Real Email OTP via Resend (with console fallback)
+    // Trigger Real Email OTP via Resend (with robust console fallback)
     await sendEmailOtp(cleanEmail, otp);
 
     res.json({
