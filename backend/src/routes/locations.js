@@ -3,6 +3,21 @@ import axios from "axios";
 
 const router = express.Router();
 
+// Helper to calculate straight-line distance using Haversine formula as a reliable fallback
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in KM
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const straightLineKm = R * c;
+  // Apply a 1.25 road-winding factor for realistic driving distance approximation
+  return Math.round(straightLineKm * 1.25);
+}
+
 // Helper to get exact coordinates for any Indian village, town, city, or state
 async function getCoords(locationName) {
   try {
@@ -26,7 +41,7 @@ async function getCoords(locationName) {
 
 /*
 ========================================
-CALCULATE REAL MAP DISTANCE (No Demo KM)
+CALCULATE REAL MAP DISTANCE (With Fallback)
 ========================================
 */
 router.post("/calculate-distance", async (req, res) => {
@@ -49,27 +64,40 @@ router.post("/calculate-distance", async (req, res) => {
       });
     }
 
-    // Query OSRM routing engine for precise road driving distance
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origCoords.lng},${origCoords.lat};${destCoords.lng},${destCoords.lat}?overview=false`;
+    let distanceKm = null;
 
-    const osrmResponse = await axios.get(osrmUrl);
-    const routeData = osrmResponse.data;
+    // Try querying OSRM routing engine first
+    try {
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origCoords.lng},${origCoords.lat};${destCoords.lng},${destCoords.lat}?overview=false`;
+      const osrmResponse = await axios.get(osrmUrl, { timeout: 5000 });
+      const routeData = osrmResponse.data;
 
-    if (routeData.code === "Ok" && routeData.routes && routeData.routes.length > 0) {
-      const distanceMeters = routeData.routes[0].distance;
-      const distanceKm = Math.round(distanceMeters / 1000);
-      
-      return res.json({
-        success: true,
-        distanceKm
-      });
+      if (routeData.code === "Ok" && routeData.routes && routeData.routes.length > 0) {
+        const distanceMeters = routeData.routes[0].distance;
+        distanceKm = Math.round(distanceMeters / 1000);
+      }
+    } catch (osrmErr) {
+      console.warn("OSRM routing engine timeout or unavailable, using Haversine calculation fallback:", osrmErr.message);
     }
 
-    return res.status(400).json({ message: "Could not calculate route distance between these points." });
+    // Fallback if OSRM didn't return a route
+    if (!distanceKm || distanceKm <= 0) {
+      distanceKm = calculateHaversineDistance(origCoords.lat, origCoords.lng, destCoords.lat, destCoords.lng);
+    }
+
+    // Ensure minimum distance of at least 1 KM if points are extremely close
+    if (distanceKm < 1) {
+      distanceKm = 1;
+    }
+
+    return res.json({
+      success: true,
+      distanceKm
+    });
 
   } catch (error) {
     console.error("Routing calculation error:", error.message);
-    return res.status(500).json({ message: "Server error while calculating route." });
+    return res.status(500).json({ message: "Server error while calculating route distance." });
   }
 });
 
