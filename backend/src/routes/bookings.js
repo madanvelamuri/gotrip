@@ -1,3 +1,4 @@
+
 import express from "express";
 import pool from "../db.js";
 import { authenticate } from "../middleware/auth.js";
@@ -5,11 +6,11 @@ import { calculateFare } from "../utils/fare.js";
 
 const router = express.Router();
 
-/*
-========================================
-CREATE BOOKING
-========================================
-*/
+// ========================================
+// CREATE BOOKING
+// POST /api/bookings
+// ========================================
+
 router.post("/", authenticate, async (req, res) => {
   try {
     const {
@@ -21,49 +22,11 @@ router.post("/", authenticate, async (req, res) => {
       toLng,
       distanceKm,
       vehicleType,
+      tripType,
       travelDate,
     } = req.body;
 
-    /*
-    ----------------------------------------
-    1. VALIDATE REQUIRED FIELDS
-    ----------------------------------------
-    */
-
-    if (
-      !from ||
-      !to ||
-      distanceKm === undefined ||
-      distanceKm === null ||
-      !vehicleType
-    ) {
-      return res.status(400).json({
-        message: "Missing booking information",
-      });
-    }
-
-    /*
-    ----------------------------------------
-    2. VALIDATE DISTANCE
-    ----------------------------------------
-    */
-
-    const numericDistance = Number(distanceKm);
-
-    if (
-      !Number.isFinite(numericDistance) ||
-      numericDistance <= 0
-    ) {
-      return res.status(400).json({
-        message: "Invalid distance. Please calculate the route again.",
-      });
-    }
-
-    /*
-    ----------------------------------------
-    3. VALIDATE USER
-    ----------------------------------------
-    */
+    // 1. VALIDATE USER
 
     if (!req.user || !req.user.id) {
       return res.status(401).json({
@@ -71,32 +34,68 @@ router.post("/", authenticate, async (req, res) => {
       });
     }
 
-    /*
-    ----------------------------------------
-    4. GET ACTIVE VEHICLE PRICING
-    ----------------------------------------
-    */
+    // 2. VALIDATE REQUIRED FIELDS
+
+    if (
+      !from ||
+      !to ||
+      distanceKm === undefined ||
+      distanceKm === null ||
+      !vehicleType ||
+      !tripType
+    ) {
+      return res.status(400).json({
+        message: "Missing booking information.",
+      });
+    }
+
+    // 3. VALIDATE TRIP TYPE
+
+    const normalizedTripType = String(tripType)
+      .trim()
+      .toLowerCase();
+
+    if (!["local", "outstation"].includes(normalizedTripType)) {
+      return res.status(400).json({
+        message: "Invalid trip type. Select local or outstation.",
+      });
+    }
+
+    // 4. VALIDATE DISTANCE
+
+    const numericDistance = Number(distanceKm);
+
+    if (
+      !Number.isFinite(numericDistance) ||
+      numericDistance <= 0 ||
+      numericDistance > 10000
+    ) {
+      return res.status(400).json({
+        message: "Invalid distance. Please calculate the route again.",
+      });
+    }
+
+    // 5. GET ACTIVE VEHICLE PRICING
 
     const pricing = await pool.query(
       `
       SELECT rate_per_km
       FROM pricing
-      WHERE vehicle_type = $1
-      AND active = true
+      WHERE LOWER(vehicle_type) = LOWER($1)
+        AND LOWER(trip_type) = LOWER($2)
+        AND active = TRUE
       LIMIT 1
       `,
-      [vehicleType]
+      [vehicleType, normalizedTripType]
     );
 
     if (pricing.rows.length === 0) {
       return res.status(400).json({
-        message: `Vehicle pricing unavailable for ${vehicleType}`,
+        message: `Vehicle pricing unavailable for ${vehicleType} (${normalizedTripType}).`,
       });
     }
 
-    const rate = Number(
-      pricing.rows[0].rate_per_km
-    );
+    const rate = Number(pricing.rows[0].rate_per_km);
 
     if (!Number.isFinite(rate) || rate <= 0) {
       return res.status(400).json({
@@ -104,11 +103,7 @@ router.post("/", authenticate, async (req, res) => {
       });
     }
 
-    /*
-    ----------------------------------------
-    5. CALCULATE FARE
-    ----------------------------------------
-    */
+    // 6. CALCULATE FARE
 
     const fare = calculateFare(
       numericDistance,
@@ -121,11 +116,7 @@ router.post("/", authenticate, async (req, res) => {
       });
     }
 
-    /*
-    ----------------------------------------
-    6. GENERATE BOOKING REFERENCE
-    ----------------------------------------
-    */
+    // 7. GENERATE BOOKING REFERENCE
 
     const reference =
       "GT-" +
@@ -133,11 +124,7 @@ router.post("/", authenticate, async (req, res) => {
       "-" +
       Math.floor(Math.random() * 1000);
 
-    /*
-    ----------------------------------------
-    7. INSERT BOOKING INTO DATABASE
-    ----------------------------------------
-    */
+    // 8. INSERT BOOKING INTO DATABASE
 
     const result = await pool.query(
       `
@@ -192,15 +179,17 @@ router.post("/", authenticate, async (req, res) => {
       ]
     );
 
-    /*
-    ----------------------------------------
-    8. SUCCESS RESPONSE
-    ----------------------------------------
-    */
+    // 9. SUCCESS RESPONSE
 
     return res.status(201).json({
       message: "Booking created successfully",
       booking: result.rows[0],
+      pricing: {
+        tripType: normalizedTripType,
+        ratePerKm: rate,
+        distanceKm: numericDistance,
+        totalFare: fare,
+      },
     });
 
   } catch (error) {
@@ -213,24 +202,22 @@ router.post("/", authenticate, async (req, res) => {
 
     return res.status(500).json({
       message: "Booking failed",
-      error: error.message,
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : undefined,
     });
   }
 });
 
+// ========================================
+// MY BOOKINGS
+// GET /api/bookings/my
+// ========================================
 
-/*
-========================================
-MY BOOKINGS
-========================================
-*/
 router.get("/my", authenticate, async (req, res) => {
   try {
-    /*
-    ----------------------------------------
-    1. VALIDATE USER
-    ----------------------------------------
-    */
+    // 1. VALIDATE USER
 
     if (!req.user || !req.user.id) {
       return res.status(401).json({
@@ -238,11 +225,7 @@ router.get("/my", authenticate, async (req, res) => {
       });
     }
 
-    /*
-    ----------------------------------------
-    2. FETCH USER BOOKINGS
-    ----------------------------------------
-    */
+    // 2. FETCH USER BOOKINGS
 
     const result = await pool.query(
       `
@@ -254,11 +237,7 @@ router.get("/my", authenticate, async (req, res) => {
       [req.user.id]
     );
 
-    /*
-    ----------------------------------------
-    3. SUCCESS RESPONSE
-    ----------------------------------------
-    */
+    // 3. SUCCESS RESPONSE
 
     return res.status(200).json(result.rows);
 
@@ -267,61 +246,125 @@ router.get("/my", authenticate, async (req, res) => {
 
     return res.status(500).json({
       message: "Unable to load bookings",
-      error: error.message,
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : undefined,
     });
   }
 });
 
+// ========================================
+// GET USER NOTIFICATIONS
+// GET /api/bookings/notifications/:userId
+// ========================================
 
-/*
-========================================
-GET USER NOTIFICATIONS
-========================================
-Endpoint: GET /api/bookings/notifications/:userId
-*/
-router.get("/notifications/:userId", authenticate, async (req, res) => {
-  try {
-    const { userId } = req.params;
+router.get(
+  "/notifications/:userId",
+  authenticate,
+  async (req, res) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          message: "Unauthorized. Please login again.",
+        });
+      }
 
-    // Optional security check to make sure users only read their own notifications
-    if (String(req.user.id) !== String(userId) && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Access denied." });
+      const { userId } = req.params;
+
+      // Users can only access their own notifications.
+      // Admins can access notifications for other users.
+
+      if (
+        String(req.user.id) !== String(userId) &&
+        req.user.role !== "admin"
+      ) {
+        return res.status(403).json({
+          message: "Access denied.",
+        });
+      }
+
+      const result = await pool.query(
+        `
+        SELECT *
+        FROM notifications
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 10
+        `,
+        [userId]
+      );
+
+      return res.status(200).json(result.rows);
+
+    } catch (error) {
+      console.error("FETCH NOTIFICATIONS ERROR:", error);
+
+      return res.status(500).json({
+        message: "Unable to load notifications",
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : undefined,
+      });
     }
-
-    const result = await pool.query(
-      `
-      SELECT *
-      FROM notifications
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT 10
-      `,
-      [userId]
-    );
-
-    return res.status(200).json(result.rows);
-
-  } catch (error) {
-    console.error("FETCH NOTIFICATIONS ERROR:", error);
-
-    return res.status(500).json({
-      message: "Unable to load notifications",
-      error: error.message,
-    });
   }
-});
+);
 
-// Mark notification as read
-router.patch("/notifications/:id/read", authenticate, async (req, res) => {
-  try {
-    await pool.query(
-      "UPDATE notifications SET is_read = true WHERE id = $1",
-      [req.params.id]
-    );
-    res.json({ message: "Notification marked as read" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update notification" });
+// ========================================
+// MARK NOTIFICATION AS READ
+// PATCH /api/bookings/notifications/:id/read
+// ========================================
+
+router.patch(
+  "/notifications/:id/read",
+  authenticate,
+  async (req, res) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          message: "Unauthorized. Please login again.",
+        });
+      }
+
+      const { id } = req.params;
+
+      const result = await pool.query(
+        `
+        UPDATE notifications
+        SET is_read = TRUE
+        WHERE id = $1
+          AND (
+            user_id = $2
+            OR $3 = 'admin'
+          )
+        RETURNING *
+        `,
+        [
+          id,
+          req.user.id,
+          req.user.role || "customer",
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Notification not found or access denied.",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Notification marked as read",
+      });
+
+    } catch (error) {
+      console.error("MARK NOTIFICATION READ ERROR:", error);
+
+      return res.status(500).json({
+        message: "Failed to update notification",
+      });
+    }
   }
-});
+);
 
 export default router;

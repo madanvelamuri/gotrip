@@ -20,9 +20,26 @@ if (typeof document !== "undefined") {
   document.head.appendChild(styleEl);
 }
 
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch (error) {
+    console.error("Invalid stored user data:", error);
+    return null;
+  }
+}
+
+function getLocalDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = getStoredUser();
 
   const [tripType, setTripType] = useState("outstation");
   const [from, setFrom] = useState("");
@@ -151,34 +168,50 @@ export default function Dashboard() {
 
   async function confirmBooking() {
     if (!pendingVehicle) return;
-    if (!transactionRef.trim()) { alert("Please enter the UPI Transaction Reference ID / UTR number."); return; }
+    if (!user?.id) {
+      alert("Your session is not valid. Please sign in again.");
+      navigate("/signin");
+      return;
+    }
+    if (!transactionRef.trim()) {
+      alert("Please enter the UPI Transaction Reference ID / UTR number.");
+      return;
+    }
+    if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) {
+      alert("Please search your route or select a valid rental package first.");
+      return;
+    }
 
     try {
-      setShowTermsModal(false);
       setBookingVehicle(pendingVehicle.id);
 
-      const tripLabel = tripType === "local" ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)` : to;
+      const tripLabel = tripType === "local"
+        ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)`
+        : to.trim();
       const scheduledDateTime = `${travelDate} ${tripTime || "10:00"}:00`;
-      const advanceAmt = tripType === "outstation" ? 200 : 150;
 
+      // The backend looks up the active rate and calculates the final fare.
       const response = await API.post("/payments/verify", {
         userId: user.id,
-        from,
+        tripType,
+        from: from.trim(),
         to: tripLabel,
-        distanceKm: distance,
+        distanceKm: Number(distance),
         vehicleType: pendingVehicle.vehicle_type,
         travelDate: scheduledDateTime,
-        amount: advanceAmt,
         transactionRef: transactionRef.trim()
       });
 
-      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully!");
+      setShowTermsModal(false);
+      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully. It is pending admin verification.");
       setSuccessActionCallback(() => () => navigate("/bookings"));
+      setPendingVehicle(null);
+      setTransactionRef("");
     } catch (error) {
+      // Keep the payment modal open so the customer can correct/retry.
       alert(error.response?.data?.message || "Booking submission failed.");
     } finally {
       setBookingVehicle(null);
-      setPendingVehicle(null);
     }
   }
 
@@ -220,7 +253,7 @@ export default function Dashboard() {
     navigate("/signin");
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const advanceAmount = tripType === "outstation" ? 200 : 150;
   const upiQrString = `upi://pay?pa=8465826241-3@ybl&pn=GoTrip&am=${advanceAmount}&cu=INR`;
 
@@ -406,7 +439,7 @@ export default function Dashboard() {
             </div>
             <div style={styles.modalFooter}>
               <button style={{ ...styles.modalCancelAction, marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
-              <button style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }} onClick={confirmBooking}>Verify Payment & Confirm Booking 🚀</button>
+              <button type="button" disabled={bookingVehicle !== null} style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a", opacity: bookingVehicle !== null ? 0.65 : 1 }} onClick={confirmBooking}>{bookingVehicle !== null ? "Submitting..." : "Submit Payment Proof 🚀"}</button>
             </div>
           </div>
         </div>
@@ -588,7 +621,7 @@ export default function Dashboard() {
                 <span style={styles.modalEyebrow}>USER EXPERIENCE</span>
                 <h2 style={styles.modalTitle}>Rate Your Experience</h2>
               </div>
-              <button style={styles.closeModalButton} onClick={() => setShowFeedbackModal(false)}>✕</button>
+              <button type="button" style={styles.closeModalButton} onClick={() => setShowFeedbackModal(false)}>✕</button>
             </div>
             <form onSubmit={handleFeedbackSubmit} style={styles.modalBody}>
               <div style={styles.inputGroupWrapper}>
@@ -614,17 +647,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {successModalMessage && (
-        <div style={styles.modalOverlay} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>
-          <div style={{ ...styles.modalCard, maxWidth: "400px", textAlign: "center", padding: "30px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: "50px", marginBottom: "10px" }}>🎉</div>
-            <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "10px" }}>Success!</h3>
-            <p style={{ fontSize: "14px", color: "#475569", marginBottom: "24px", lineHeight: "1.5" }}>{successModalMessage}</p>
-            <button style={{ ...styles.modalActionBtn, width: "100%", padding: "12px" }} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>Continue</button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
@@ -643,6 +665,7 @@ const styles = {
   adminButton: { backgroundColor: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "7px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer" },
   logoutButton: { backgroundColor: "#fef2f2", color: "#dc2626", border: "1px solid #fee2e2", padding: "7px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer" },
   notificationBadge: { marginLeft: "5px", backgroundColor: "#dc2626", color: "#fff", padding: "2px 5px", borderRadius: "50%", fontSize: "9px" },
+  alertHeaderRow: { display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px", borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" },
   alertFilterButtons: { display: "flex", gap: "6px" },
   alertTabBtn: { flex: 1, background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "6px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", color: "#64748b", cursor: "pointer" },
   alertTabActive: { backgroundColor: "#2563eb", color: "#ffffff", borderColor: "#2563eb" },
@@ -662,7 +685,7 @@ const styles = {
   routeForm: { display: "flex", flexDirection: "column", gap: "20px" },
   inputsGrid: { display: "flex", flexDirection: "column", gap: "18px" },
   inputGroupWrapper: { display: "flex", flexDirection: "column", gap: "8px", width: "100%" },
-  fieldLabel: { fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "6px", display: "block" },
+  fieldLabel: { fontSize: "13px", fontWeight: "700", color: "#334155" },
   selectPackageDropdown: { width: "100%", height: "50px", padding: "0 16px", border: "1px solid #cbd5e1", borderRadius: "12px", fontSize: "14px", backgroundColor: "#f8fafc", fontWeight: "600" },
   primaryButton: { backgroundColor: "#2563eb", color: "#ffffff", border: "none", padding: "16px 24px", borderRadius: "12px", fontSize: "16px", fontWeight: "800", cursor: "pointer", width: "100%", marginTop: "8px" },
   fullButton: { marginTop: "20px", width: "100%", padding: "14px", fontSize: "15px" },
@@ -683,13 +706,13 @@ const styles = {
   vehicleCard: { backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "20px", padding: "32px", display: "flex", flexDirection: "column" },
   cardHeaderTop: { display: "flex", justifyContent: "space-between", marginBottom: "20px" },
   vehicleIcon: { fontSize: "30px", backgroundColor: "#eff6ff", width: "60px", height: "60px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center" },
-  categoryBadge: { fontSize: "11px", fontWeight: "800", backgroundColor: "#f0fdf4", color: "#15803d", padding: "6px 12px", borderRadius: "14px", textTransform: "uppercase" },
+  categoryBadge: { fontSize: "11px", fontWeight: "800", backgroundColor: "#f0fdf4", color: "#15803d", padding: "6px 12px", borderRadius: "14px" },
   vehicleTitle: { fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "6px" },
   vehicleRate: { fontSize: "13px", color: "#64748b", marginBottom: "24px", fontWeight: "600" },
   fareContainer: { marginTop: "auto", paddingTop: "20px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" },
   fareLabel: { fontSize: "12px", fontWeight: "700", color: "#64748b" },
   fare: { fontSize: "24px", fontWeight: "800", color: "#2563eb" },
-  messageBox: { backgroundColor: "#ffffff", padding: "60px 20px", borderRadius: "20px", border: "1px solid #e2e8f0", textAlign: "center" },
+  messageBox: { backgroundColor: "#ffffff", padding: "60px 20px", borderRadius: "20px", border: "1px solid #e2e8f0", textAlign: "center", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.03)" },
   funnyLoaderContainer: { position: "relative", height: "50px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "center" },
   carMovingIcon: { fontSize: "24px", position: "absolute", animation: "bounceCar 1s infinite alternate ease-in-out" },
   messageText: { fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: 0 },
@@ -702,7 +725,7 @@ const styles = {
   closeModalButton: { background: "none", border: "none", fontSize: "18px", fontWeight: "bold", color: "#64748b", cursor: "pointer" },
   modalBody: { padding: "28px", maxHeight: "65vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: "20px" },
   ruleSection: { backgroundColor: "#f8fafc", padding: "18px", borderRadius: "14px", border: "1px solid #e2e8f0" },
-  ruleTitle: { fontSize: "14px", fontWeight: "800", margin: "0 0 10px 0", color: "#1e3a8a" },
+  ruleTitle: { fontSize: "14px", fontWeight: "800", margin: "0 0 10px 0" },
   ruleList: { margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#334155", lineHeight: "1.6", display: "flex", flexDirection: "column", gap: "6px" },
   modalFooter: { padding: "20px 28px", borderTop: "1px solid #e2e8f0", backgroundColor: "#f8fafc", display: "flex", justifyContent: "flex-end" },
   modalActionBtn: { backgroundColor: "#2563eb", color: "#ffffff", border: "none", padding: "12px 24px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: "pointer" },

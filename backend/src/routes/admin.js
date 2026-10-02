@@ -1,66 +1,294 @@
+
 import express from "express";
 import pool from "../db.js";
 import {
   authenticate,
-  adminOnly
+  authorizeAdmin,
 } from "../middleware/auth.js";
 
 const router = express.Router();
 
-/*
-========================================
-GET ALL BOOKINGS (Admin Only)
-========================================
-Endpoint: GET /api/admin/bookings
-*/
+// ========================================
+// ADMIN AUTHENTICATION
+// ========================================
+
+const adminAccess = [authenticate, authorizeAdmin];
+
+// ========================================
+// GET ALL BOOKINGS
+// GET /api/admin/bookings
+// ========================================
+
+router.get("/bookings", ...adminAccess, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        b.*,
+        u.name AS customer_name,
+        u.email,
+        u.mobile,
+        pv.id AS payment_id,
+        pv.transaction_ref,
+        pv.upi_id,
+        pv.amount AS advance_amount,
+        pv.status AS payment_status,
+        pv.created_at AS payment_created_at
+      FROM bookings b
+      LEFT JOIN users u
+        ON b.user_id = u.id
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM payment_verifications
+        WHERE booking_id = b.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) pv ON TRUE
+      ORDER BY b.created_at DESC
+      `
+    );
+
+    return res.status(200).json(result.rows);
+
+  } catch (error) {
+    console.error("ADMIN BOOKINGS ERROR:", error);
+
+    return res.status(500).json({
+      message: "Server error while fetching bookings.",
+    });
+  }
+});
+
+// ========================================
+// GET PAYMENT DETAILS FOR ONE BOOKING
+// GET /api/admin/bookings/:id/payment
+// ========================================
+
 router.get(
-  "/bookings",
-  authenticate,
-  adminOnly,
+  "/bookings/:id/payment",
+  ...adminAccess,
   async (req, res) => {
     try {
+      const { id } = req.params;
+
       const result = await pool.query(
         `
         SELECT
-          b.*,
-          u.name,
-          u.mobile,
-          u.email
-        FROM bookings b
-        JOIN users u
-        ON b.user_id = u.id
-        ORDER BY b.created_at DESC
-        `
+          pv.*,
+          b.booking_reference,
+          b.total_fare,
+          b.from_location,
+          b.to_location,
+          u.name AS customer_name,
+          u.email,
+          u.mobile
+        FROM payment_verifications pv
+        JOIN bookings b
+          ON pv.booking_id = b.id
+        LEFT JOIN users u
+          ON pv.user_id = u.id
+        WHERE pv.booking_id = $1
+        ORDER BY pv.created_at DESC
+        LIMIT 1
+        `,
+        [id]
       );
 
-      res.json(result.rows);
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Payment details not found for this booking.",
+        });
+      }
+
+      return res.status(200).json(result.rows[0]);
+
     } catch (error) {
-      console.error("Admin bookings fetch error:", error);
-      res.status(500).json({ message: "Server error while fetching bookings." });
+      console.error("ADMIN PAYMENT FETCH ERROR:", error);
+
+      return res.status(500).json({
+        message: "Unable to fetch payment details.",
+      });
     }
   }
 );
 
-/*
-========================================
-UPDATE BOOKING STATUS & NOTIFY (Admin Only)
-========================================
-Endpoint: PATCH /api/admin/bookings/:id/status
-*/
-router.patch(
-  "/bookings/:id/status",
-  authenticate,
-  adminOnly,
-  async (req, res) => {
-    try {
-      const { status } = req.body;
-      const bookingId = req.params.id;
+// ========================================
+// UPDATE PAYMENT VERIFICATION STATUS
+// PATCH /api/admin/bookings/:id/payment-status
+// ========================================
 
-      if (!status) {
-        return res.status(400).json({ message: "Status is required." });
+router.patch(
+  "/bookings/:id/payment-status",
+  ...adminAccess,
+  async (req, res) => {
+    const { status } = req.body;
+
+    const normalizedStatus = String(status || "")
+      .trim()
+      .toLowerCase();
+
+    if (!["verified", "rejected"].includes(normalizedStatus)) {
+      return res.status(400).json({
+        message: "Payment status must be verified or rejected.",
+      });
+    }
+
+    let client;
+
+    try {
+      client = await pool.connect();
+
+      await client.query("BEGIN");
+
+      // Lock the latest payment record for this booking.
+
+      const paymentResult = await client.query(
+        `
+        SELECT *
+        FROM payment_verifications
+        WHERE booking_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+        `,
+        [req.params.id]
+      );
+
+      if (paymentResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          message: "Payment verification record not found.",
+        });
       }
 
-      // Update booking status
+      const payment = paymentResult.rows[0];
+
+      if (payment.status !== "pending") {
+        await client.query("ROLLBACK");
+
+        return res.status(409).json({
+          message: `Payment has already been marked as ${payment.status}.`,
+        });
+      }
+
+      // Update payment verification.
+
+      const updatedPayment = await client.query(
+        `
+        UPDATE payment_verifications
+        SET status = $1
+        WHERE id = $2
+        RETURNING *
+        `,
+        [normalizedStatus, payment.id]
+      );
+
+      // Get booking details.
+
+      const bookingResult = await client.query(
+        `
+        SELECT *
+        FROM bookings
+        WHERE id = $1
+        FOR UPDATE
+        `,
+        [payment.booking_id]
+      );
+
+      if (bookingResult.rows.length === 0) {
+        throw new Error("Associated booking not found.");
+      }
+
+      const booking = bookingResult.rows[0];
+
+      // Notify customer.
+
+      const notificationMessage =
+        normalizedStatus === "verified"
+          ? `Your payment for booking ${booking.booking_reference} has been verified.`
+          : `Your payment for booking ${booking.booking_reference} was rejected. Please contact GoTrip support.`;
+
+      await client.query(
+        `
+        INSERT INTO notifications
+        (
+          user_id,
+          title,
+          message,
+          is_read,
+          created_at
+        )
+        VALUES ($1, $2, $3, FALSE, CURRENT_TIMESTAMP)
+        `,
+        [
+          booking.user_id,
+          normalizedStatus === "verified"
+            ? "Payment Verified"
+            : "Payment Rejected",
+          notificationMessage,
+        ]
+      );
+
+      await client.query("COMMIT");
+
+      return res.status(200).json({
+        success: true,
+        message: `Payment ${normalizedStatus} successfully.`,
+        payment: updatedPayment.rows[0],
+      });
+
+    } catch (error) {
+      if (client) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          console.error("PAYMENT ROLLBACK ERROR:", rollbackError);
+        }
+      }
+
+      console.error("ADMIN PAYMENT UPDATE ERROR:", error);
+
+      return res.status(500).json({
+        message: "Unable to update payment status.",
+      });
+
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  }
+);
+
+// ========================================
+// UPDATE BOOKING STATUS
+// PATCH /api/admin/bookings/:id/status
+// ========================================
+
+router.patch(
+  "/bookings/:id/status",
+  ...adminAccess,
+  async (req, res) => {
+    try {
+      const normalizedStatus = String(req.body.status || "")
+        .trim()
+        .toLowerCase();
+
+      const allowedStatuses = [
+        "pending",
+        "confirmed",
+        "cancelled",
+        "completed",
+      ];
+
+      if (!allowedStatuses.includes(normalizedStatus)) {
+        return res.status(400).json({
+          message: "Invalid booking status.",
+          allowedStatuses,
+        });
+      }
+
       const result = await pool.query(
         `
         UPDATE bookings
@@ -68,135 +296,170 @@ router.patch(
         WHERE id = $2
         RETURNING *
         `,
-        [status.toLowerCase(), bookingId]
+        [normalizedStatus, req.params.id]
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Booking not found." });
+        return res.status(404).json({
+          message: "Booking not found.",
+        });
       }
 
       const booking = result.rows[0];
 
-      // Automatically trigger a real-time notification for the customer
       await pool.query(
         `
-        INSERT INTO notifications (user_id, title, message)
-        VALUES ($1, $2, $3)
+        INSERT INTO notifications
+        (
+          user_id,
+          title,
+          message,
+          is_read,
+          created_at
+        )
+        VALUES ($1, $2, $3, FALSE, CURRENT_TIMESTAMP)
         `,
         [
           booking.user_id,
-          `Booking ${status.toUpperCase()}`,
-          `Your booking reference ${booking.booking_reference} has been ${status.toLowerCase()} by admin.`
+          `Booking ${normalizedStatus.toUpperCase()}`,
+          `Your booking reference ${booking.booking_reference} has been ${normalizedStatus} by GoTrip.`,
         ]
       );
 
-      res.json({
-        message: "Booking status updated successfully",
-        booking: booking
+      return res.status(200).json({
+        success: true,
+        message: "Booking status updated successfully.",
+        booking,
       });
 
     } catch (error) {
-      console.error("Admin status update error:", error);
-      res.status(500).json({ message: "Server error while updating booking status." });
+      console.error("ADMIN BOOKING STATUS ERROR:", error);
+
+      return res.status(500).json({
+        message: "Server error while updating booking status.",
+      });
     }
   }
 );
 
-/*
-========================================
-UPDATE VEHICLE PRICING (Admin Only)
-========================================
-Endpoint: PUT/PATCH /api/admin/pricing/:id
-*/
-router.all(
-  "/pricing/:id",
-  authenticate,
-  adminOnly,
-  async (req, res) => {
-    try {
-      const { ratePerKm } = req.body;
+// ========================================
+// UPDATE VEHICLE PRICING
+// PUT/PATCH /api/admin/pricing/:id
+// ========================================
 
-      if (!ratePerKm || isNaN(ratePerKm)) {
-        return res.status(400).json({ message: "A valid rate per KM is required." });
-      }
+async function updatePricing(req, res) {
+  try {
+    const ratePerKm = Number(req.body.ratePerKm);
 
-      const result = await pool.query(
-        `
-        UPDATE pricing
-        SET
-          rate_per_km = $1
-        WHERE id = $2
-        RETURNING *
-        `,
-        [
-          ratePerKm,
-          req.params.id
-        ]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Pricing tier not found." });
-      }
-
-      res.json({
-        message: "Pricing updated successfully",
-        pricing: result.rows[0]
+    if (!Number.isFinite(ratePerKm) || ratePerKm <= 0) {
+      return res.status(400).json({
+        message: "A valid rate per KM is required.",
       });
-
-    } catch (error) {
-      console.error("Admin pricing update error:", error);
-      res.status(500).json({ message: "Server error while updating pricing." });
     }
-  }
-);
 
-/*
-========================================
-GET SUPPORT DATA & FEEDBACK (Admin Only)
-========================================
-Endpoint: GET /api/admin/support-data
-*/
+    const result = await pool.query(
+      `
+      UPDATE pricing
+      SET rate_per_km = $1
+      WHERE id = $2
+      RETURNING *
+      `,
+      [ratePerKm, req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Pricing tier not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Pricing updated successfully.",
+      pricing: result.rows[0],
+    });
+
+  } catch (error) {
+    console.error("ADMIN PRICING UPDATE ERROR:", error);
+
+    return res.status(500).json({
+      message: "Server error while updating pricing.",
+    });
+  }
+}
+
+router.put("/pricing/:id", ...adminAccess, updatePricing);
+router.patch("/pricing/:id", ...adminAccess, updatePricing);
+
+// ========================================
+// GET SUPPORT DATA AND FEEDBACK
+// GET /api/admin/support-data
+// ========================================
+
 router.get(
   "/support-data",
-  authenticate,
-  adminOnly,
+  ...adminAccess,
   async (req, res) => {
     try {
-      const feedbackResult = await pool.query(
-        `SELECT * FROM customer_feedback ORDER BY created_at DESC`
-      );
-      const ticketsResult = await pool.query(
-        `SELECT * FROM support_tickets ORDER BY created_at DESC`
-      );
+      const [feedbackResult, ticketsResult] = await Promise.all([
+        pool.query(
+          `
+          SELECT *
+          FROM customer_feedback
+          ORDER BY created_at DESC
+          `
+        ),
 
-      res.json({
+        pool.query(
+          `
+          SELECT *
+          FROM support_tickets
+          ORDER BY created_at DESC
+          `
+        ),
+      ]);
+
+      return res.status(200).json({
         feedback: feedbackResult.rows,
-        tickets: ticketsResult.rows
+        tickets: ticketsResult.rows,
       });
+
     } catch (error) {
-      console.error("Admin support data fetch error:", error);
-      res.status(500).json({ message: "Server error while fetching support data." });
+      console.error("ADMIN SUPPORT DATA ERROR:", error);
+
+      return res.status(500).json({
+        message: "Server error while fetching support data.",
+      });
     }
   }
 );
 
-/*
-========================================
-UPDATE SUPPORT TICKET STATUS & NOTIFY (Admin Only)
-========================================
-Endpoint: PATCH /api/admin/tickets/:id/status
-*/
+// ========================================
+// UPDATE SUPPORT TICKET STATUS
+// PATCH /api/admin/tickets/:id/status
+// ========================================
+
 router.patch(
   "/tickets/:id/status",
-  authenticate,
-  adminOnly,
+  ...adminAccess,
   async (req, res) => {
     try {
-      const { status } = req.body;
-      const ticketId = req.params.id;
+      const normalizedStatus = String(req.body.status || "")
+        .trim()
+        .toLowerCase();
 
-      if (!status) {
-        return res.status(400).json({ message: "Status is required." });
+      const allowedStatuses = [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed",
+      ];
+
+      if (!allowedStatuses.includes(normalizedStatus)) {
+        return res.status(400).json({
+          message: "Invalid support ticket status.",
+          allowedStatuses,
+        });
       }
 
       const result = await pool.query(
@@ -206,125 +469,126 @@ router.patch(
         WHERE id = $2
         RETURNING *
         `,
-        [status.toLowerCase(), ticketId]
+        [normalizedStatus, req.params.id]
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Support ticket not found." });
+        return res.status(404).json({
+          message: "Support ticket not found.",
+        });
       }
 
       const ticket = result.rows[0];
 
-      // Automatically trigger a real-time notification for the customer if linked to a user account
       if (ticket.user_id) {
         await pool.query(
           `
-          INSERT INTO notifications (user_id, title, message)
-          VALUES ($1, $2, $3)
+          INSERT INTO notifications
+          (
+            user_id,
+            title,
+            message,
+            is_read,
+            created_at
+          )
+          VALUES ($1, $2, $3, FALSE, CURRENT_TIMESTAMP)
           `,
           [
             ticket.user_id,
-            `Support Ticket Updated`,
-            `Your support ticket regarding "${ticket.subject}" is now marked as: ${status.toUpperCase()}`
+            "Support Ticket Updated",
+            `Your support ticket regarding "${ticket.subject}" is now marked as ${normalizedStatus}.`,
           ]
         );
       }
 
-      res.json({
-        message: "Ticket status updated successfully",
-        ticket: ticket
+      return res.status(200).json({
+        success: true,
+        message: "Ticket status updated successfully.",
+        ticket,
       });
 
     } catch (error) {
-      console.error("Admin ticket status update error:", error);
-      res.status(500).json({ message: "Server error while updating ticket status." });
+      console.error("ADMIN TICKET STATUS ERROR:", error);
+
+      return res.status(500).json({
+        message: "Server error while updating ticket status.",
+      });
     }
   }
 );
 
-/*
-========================================
-RESOLVE SUPPORT TICKET & NOTIFY (Admin Only)
-========================================
-Endpoint: PATCH /api/admin/tickets/:id/resolve
-*/
+// ========================================
+// RESOLVE SUPPORT TICKET
+// PATCH /api/admin/tickets/:id/resolve
+// ========================================
+
 router.patch(
   "/tickets/:id/resolve",
-  authenticate,
-  adminOnly,
+  ...adminAccess,
   async (req, res) => {
     try {
-      const { resolution, status } = req.body;
-      const ticketId = req.params.id;
+      const { resolution } = req.body;
 
-      // Optional: Add resolution column if not present via SQL: 
-      // ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS resolution TEXT;
+      if (!resolution || !String(resolution).trim()) {
+        return res.status(400).json({
+          message: "Resolution message is required.",
+        });
+      }
 
       const result = await pool.query(
         `
         UPDATE support_tickets
-        SET status = $1, resolution = $2
-        WHERE id = $3
+        SET status = 'resolved',
+            resolution = $1
+        WHERE id = $2
         RETURNING *
         `,
-        [status || "resolved", resolution || "", ticketId]
+        [String(resolution).trim(), req.params.id]
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Support ticket not found." });
+        return res.status(404).json({
+          message: "Support ticket not found.",
+        });
       }
 
       const ticket = result.rows[0];
 
-      // Automatically trigger a real-time notification for the customer
       if (ticket.user_id) {
         await pool.query(
           `
-          INSERT INTO notifications (user_id, title, message)
-          VALUES ($1, $2, $3)
+          INSERT INTO notifications
+          (
+            user_id,
+            title,
+            message,
+            is_read,
+            created_at
+          )
+          VALUES ($1, $2, $3, FALSE, CURRENT_TIMESTAMP)
           `,
           [
             ticket.user_id,
             `Support Ticket Resolved (#TK-${ticket.id})`,
-            `Admin Response: "${resolution || 'Your issue has been addressed.'}"`
+            `Admin response: ${String(resolution).trim()}`,
           ]
         );
       }
 
-      res.json({
-        message: "Ticket response submitted successfully",
-        ticket: ticket
+      return res.status(200).json({
+        success: true,
+        message: "Ticket response submitted successfully.",
+        ticket,
       });
 
     } catch (error) {
-      console.error("Admin ticket resolution error:", error);
-      res.status(500).json({ message: "Server error while saving ticket resolution." });
+      console.error("ADMIN TICKET RESOLUTION ERROR:", error);
+
+      return res.status(500).json({
+        message: "Server error while saving ticket resolution.",
+      });
     }
   }
 );
-
-router.get("/bookings", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        b.*, 
-        u.name AS customer_name, 
-        u.email, 
-        u.mobile,
-        pv.transaction_ref,
-        pv.upi_id,
-        pv.amount AS advance_amount,
-        pv.status AS payment_status
-      FROM bookings b
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN payment_verifications pv ON pv.booking_id = b.id
-      ORDER BY b.created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Admin bookings error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
 export default router;

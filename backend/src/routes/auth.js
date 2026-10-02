@@ -1,25 +1,44 @@
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../db.js";
 import { Resend } from "resend";
+import { randomInt } from "crypto";
 
 const router = express.Router();
 
-// Store pending signup verifications temporarily.
-const pendingSignups = new Map();
+// ========================================
+// EMAIL SERVICE
+// ========================================
 
-// Initialize Resend only when an API key is configured.
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Generate a six-digit OTP.
+// ========================================
+// TEMPORARY OTP STORAGE
+// ========================================
+
+const pendingSignups = new Map();
+const pendingResets = new Map();
+
+const OTP_EXPIRY = 5 * 60 * 1000;
+const RESET_OTP_EXPIRY = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+
+// ========================================
+// GENERATE SECURE OTP
+// ========================================
+
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
-// Generate JWT token.
+// ========================================
+// GENERATE JWT TOKEN
+// ========================================
+
 function createToken(user) {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured.");
@@ -39,43 +58,58 @@ function createToken(user) {
   );
 }
 
-// Send signup OTP through Resend.
-async function sendEmailOtp(toEmail, otpCode) {
+// ========================================
+// SEND EMAIL OTP
+// ========================================
+
+async function sendOTPEmail(email, otp, purpose = "signup") {
   if (!resend) {
     if (process.env.NODE_ENV === "production") {
       throw new Error("RESEND_API_KEY is not configured.");
     }
 
-    console.log("------------------------------------");
-    console.log(`Development OTP for ${toEmail}: ${otpCode}`);
-    console.log("------------------------------------");
+    console.log("----------------------------------");
+    console.log(`Development OTP for ${email}: ${otp}`);
+    console.log("----------------------------------");
 
     return;
   }
+
+  const isReset = purpose === "reset";
 
   const { data, error } = await resend.emails.send({
     from:
       process.env.EMAIL_FROM ||
       "GoTrip Support <onboarding@resend.dev>",
-    to: [toEmail],
-    subject: "Your GoTrip Verification Code",
-    text: `Your GoTrip verification code is ${otpCode}. It expires in 5 minutes.`,
+
+    to: [email],
+
+    subject: isReset
+      ? "GoTrip Password Reset Code"
+      : "GoTrip Email Verification",
+
+    text: isReset
+      ? `Your GoTrip password reset code is ${otp}. It expires in 10 minutes.`
+      : `Your GoTrip verification code is ${otp}. It expires in 5 minutes.`,
   });
 
   if (error) {
-    console.error("Resend email error:", error);
-    throw new Error(error.message || "Unable to send verification email.");
+    console.error("EMAIL SERVICE ERROR:", error);
+
+    throw new Error(
+      error.message || "Unable to send OTP email."
+    );
   }
 
-  console.log("Signup OTP email sent:", data?.id);
+  console.log("OTP email sent:", data?.id);
 }
 
-/*
-================================================
-SIGN UP - STEP 1: SEND EMAIL OTP
-POST /api/auth/signup-send-otp
-================================================
-*/
+// ========================================
+// SIGNUP - STEP 1
+// SEND EMAIL OTP
+// POST /api/auth/signup-send-otp
+// ========================================
+
 router.post("/signup-send-otp", async (req, res) => {
   try {
     const { name, email, mobile, password } = req.body;
@@ -87,9 +121,30 @@ router.post("/signup-send-otp", async (req, res) => {
       });
     }
 
+    if (
+      typeof name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid signup information.",
+      });
+    }
+
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
-    const cleanMobile = mobile?.trim() || null;
+    const cleanMobile =
+      typeof mobile === "string" && mobile.trim()
+        ? mobile.trim()
+        : null;
+
+    if (!cleanName || cleanName.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid name.",
+      });
+    }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return res.status(400).json({
@@ -98,22 +153,25 @@ router.post("/signup-send-otp", async (req, res) => {
       });
     }
 
-    if (password.length < 6) {
+    if (password.length < 6 || password.length > 128) {
       return res.status(400).json({
         success: false,
-        message: "Password must contain at least 6 characters.",
+        message: "Password must contain 6 to 128 characters.",
       });
     }
 
-    const existingQuery = cleanMobile
-      ? `SELECT id FROM users WHERE email = $1 OR mobile = $2 LIMIT 1`
-      : `SELECT id FROM users WHERE email = $1 LIMIT 1`;
+    // Check existing email/mobile
 
-    const existingParams = cleanMobile
-      ? [cleanEmail, cleanMobile]
-      : [cleanEmail];
-
-    const existing = await pool.query(existingQuery, existingParams);
+    const existing = await pool.query(
+      `
+      SELECT id
+      FROM users
+      WHERE LOWER(email) = LOWER($1)
+         OR ($2::varchar IS NOT NULL AND mobile = $2)
+      LIMIT 1
+      `,
+      [cleanEmail, cleanMobile]
+    );
 
     if (existing.rows.length > 0) {
       return res.status(409).json({
@@ -122,22 +180,28 @@ router.post("/signup-send-otp", async (req, res) => {
       });
     }
 
+    // Hash password before temporary storage
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
     const otp = generateOTP();
-    const expiresAt = Date.now() + 5 * 60 * 1000;
 
     pendingSignups.set(cleanEmail, {
       otp,
-      expiresAt,
+      passwordHash,
       name: cleanName,
       email: cleanEmail,
       mobile: cleanMobile,
-      password,
+      expiresAt: Date.now() + OTP_EXPIRY,
+      attempts: 0,
     });
 
     try {
-      await sendEmailOtp(cleanEmail, otp);
+      await sendOTPEmail(cleanEmail, otp, "signup");
     } catch (emailError) {
       pendingSignups.delete(cleanEmail);
+
+      console.error("SIGNUP OTP EMAIL ERROR:", emailError.message);
 
       return res.status(502).json({
         success: false,
@@ -151,7 +215,7 @@ router.post("/signup-send-otp", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Signup OTP error:", error);
+    console.error("SIGNUP OTP ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -160,18 +224,20 @@ router.post("/signup-send-otp", async (req, res) => {
   }
 });
 
+// ========================================
+// SIGNUP - STEP 2
+// VERIFY OTP AND CREATE ACCOUNT
+// POST /api/auth/verify-otp-signup
+// ========================================
 
-/*
-================================================
-SIGN UP - STEP 2: VERIFY OTP AND CREATE ACCOUNT
-POST /api/auth/verify-otp-signup
-================================================
-*/
 router.post("/verify-otp-signup", async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    if (!email || !otp) {
+    if (
+      typeof email !== "string" ||
+      !otp
+    ) {
       return res.status(400).json({
         success: false,
         message: "Email and OTP are required.",
@@ -199,6 +265,17 @@ router.post("/verify-otp-signup", async (req, res) => {
       });
     }
 
+    pendingUser.attempts += 1;
+
+    if (pendingUser.attempts > MAX_OTP_ATTEMPTS) {
+      pendingSignups.delete(cleanEmail);
+
+      return res.status(429).json({
+        success: false,
+        message: "Too many incorrect attempts. Please request a new OTP.",
+      });
+    }
+
     if (pendingUser.otp !== cleanOtp) {
       return res.status(400).json({
         success: false,
@@ -206,11 +283,34 @@ router.post("/verify-otp-signup", async (req, res) => {
       });
     }
 
-    const passwordHash = await bcrypt.hash(pendingUser.password, 12);
+    // Check again to prevent duplicate account creation
+
+    const existing = await pool.query(
+      `
+      SELECT id
+      FROM users
+      WHERE LOWER(email) = LOWER($1)
+         OR ($2::varchar IS NOT NULL AND mobile = $2)
+      LIMIT 1
+      `,
+      [pendingUser.email, pendingUser.mobile]
+    );
+
+    if (existing.rows.length > 0) {
+      pendingSignups.delete(cleanEmail);
+
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email or mobile already exists.",
+      });
+    }
+
+    // Create account
 
     const result = await pool.query(
       `
-      INSERT INTO users (
+      INSERT INTO users
+      (
         name,
         email,
         mobile,
@@ -223,12 +323,18 @@ router.post("/verify-otp-signup", async (req, res) => {
         pendingUser.name,
         pendingUser.email,
         pendingUser.mobile,
-        passwordHash,
+        pendingUser.passwordHash,
       ]
     );
 
     const user = result.rows[0];
+
+    // Remove temporary signup data
+
     pendingSignups.delete(cleanEmail);
+
+    // Generate JWT
+
     const token = createToken(user);
 
     return res.status(201).json({
@@ -239,7 +345,7 @@ router.post("/verify-otp-signup", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Signup verification error:", error);
+    console.error("SIGNUP VERIFICATION ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -248,18 +354,22 @@ router.post("/verify-otp-signup", async (req, res) => {
   }
 });
 
+// ========================================
+// SIGN IN
+// EMAIL OR MOBILE
+// POST /api/auth/signin
+// ========================================
 
-/*
-================================================
-SIGN IN - DIRECT SIGN-IN (EMAIL OR MOBILE)
-POST /api/auth/signin
-================================================
-*/
 router.post("/signin", async (req, res) => {
   try {
     const { login, password } = req.body;
 
-    if (!login || !password) {
+    if (
+      typeof login !== "string" ||
+      typeof password !== "string" ||
+      !login.trim() ||
+      !password
+    ) {
       return res.status(400).json({
         success: false,
         message: "Email/mobile and password are required.",
@@ -267,20 +377,29 @@ router.post("/signin", async (req, res) => {
     }
 
     const identifier = login.trim();
+
     const isEmail = identifier.includes("@");
 
     const query = isEmail
-      ? `SELECT id, name, email, mobile, password_hash, role
-         FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`
-      : `SELECT id, name, email, mobile, password_hash, role
-         FROM users WHERE mobile = $1 LIMIT 1`;
+      ? `
+        SELECT id, name, email, mobile, password_hash, role
+        FROM users
+        WHERE LOWER(email) = LOWER($1)
+        LIMIT 1
+      `
+      : `
+        SELECT id, name, email, mobile, password_hash, role
+        FROM users
+        WHERE mobile = $1
+        LIMIT 1
+      `;
 
     const result = await pool.query(query, [identifier]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: "Account not found. Please sign up first.",
+        message: "Invalid email/mobile or password.",
       });
     }
 
@@ -294,9 +413,11 @@ router.post("/signin", async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({
         success: false,
-        message: "Invalid password.",
+        message: "Invalid email/mobile or password.",
       });
     }
+
+    // Generate JWT with user ID and role
 
     const token = createToken(user);
 
@@ -312,8 +433,9 @@ router.post("/signin", async (req, res) => {
         role: user.role,
       },
     });
+
   } catch (error) {
-    console.error("Sign-in error:", error);
+    console.error("SIGN-IN ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -321,19 +443,21 @@ router.post("/signin", async (req, res) => {
     });
   }
 });
-// Store temporary password reset requests
-const pendingResets = new Map();
 
-/*
-=========================================
-FORGOT PASSWORD - STEP 1: SEND RESET CODE
-=========================================
-*/
+// ========================================
+// FORGOT PASSWORD - STEP 1
+// SEND RESET OTP
+// POST /api/auth/forgot-password
+// ========================================
+
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email || !email.includes("@")) {
+    if (
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       return res.status(400).json({
         success: false,
         message: "A valid email address is required.",
@@ -343,62 +467,93 @@ router.post("/forgot-password", async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
 
     const userResult = await pool.query(
-      `SELECT id, email FROM users WHERE email = $1 LIMIT 1`,
+      `
+      SELECT id, email
+      FROM users
+      WHERE LOWER(email) = LOWER($1)
+      LIMIT 1
+      `,
       [cleanEmail]
     );
 
+    // Generic response prevents account enumeration
+
+    const genericResponse = {
+      success: true,
+      message: "If the account exists, a password reset code will be sent.",
+    };
+
     if (userResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No account found with this email address.",
-      });
+      return res.status(200).json(genericResponse);
     }
 
     const code = generateOTP();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // Expires in 10 minutes
 
-    pendingResets.set(cleanEmail, { code, expiresAt });
-
-    console.log(`\n==================================================`);
-    console.log(`🔑 [PASSWORD RESET CODE] For ${cleanEmail}: ${code}`);
-    console.log(`==================================================\n`);
-
-    return res.status(200).json({
-      success: true,
-      message: "Password reset code generated (check terminal logs).",
+    pendingResets.set(cleanEmail, {
+      code,
+      expiresAt: Date.now() + RESET_OTP_EXPIRY,
+      attempts: 0,
     });
 
+    try {
+      await sendOTPEmail(cleanEmail, code, "reset");
+    } catch (emailError) {
+      pendingResets.delete(cleanEmail);
+
+      console.error("RESET OTP EMAIL ERROR:", emailError.message);
+
+      return res.status(502).json({
+        success: false,
+        message: "Unable to send password reset email. Please try again later.",
+      });
+    }
+
+    return res.status(200).json(genericResponse);
+
   } catch (error) {
-    console.error("Forgot password error:", error);
-    return res.status(500).json({ success: false, message: "Server error while processing request." });
+    console.error("FORGOT PASSWORD ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while processing request.",
+    });
   }
 });
 
-/*
-=========================================
-FORGOT PASSWORD - STEP 2: VERIFY & UPDATE PASSWORD
-=========================================
-*/
+// ========================================
+// FORGOT PASSWORD - STEP 2
+// VERIFY OTP AND UPDATE PASSWORD
+// POST /api/auth/reset-password
+// ========================================
+
 router.post("/reset-password", async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
 
-    if (!email || !code || !newPassword) {
+    if (
+      typeof email !== "string" ||
+      !code ||
+      typeof newPassword !== "string"
+    ) {
       return res.status(400).json({
         success: false,
         message: "Email, reset code, and new password are required.",
       });
     }
 
-    if (newPassword.length < 6) {
+    if (
+      newPassword.length < 6 ||
+      newPassword.length > 128
+    ) {
       return res.status(400).json({
         success: false,
-        message: "New password must contain at least 6 characters.",
+        message: "New password must contain 6 to 128 characters.",
       });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = String(code).trim();
+
     const resetRecord = pendingResets.get(cleanEmail);
 
     if (!resetRecord) {
@@ -410,9 +565,21 @@ router.post("/reset-password", async (req, res) => {
 
     if (Date.now() > resetRecord.expiresAt) {
       pendingResets.delete(cleanEmail);
+
       return res.status(400).json({
         success: false,
         message: "Reset code has expired. Please request a new one.",
+      });
+    }
+
+    resetRecord.attempts += 1;
+
+    if (resetRecord.attempts > MAX_OTP_ATTEMPTS) {
+      pendingResets.delete(cleanEmail);
+
+      return res.status(429).json({
+        success: false,
+        message: "Too many incorrect attempts. Please request a new code.",
       });
     }
 
@@ -425,10 +592,24 @@ router.post("/reset-password", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await pool.query(
-      `UPDATE users SET password_hash = $1 WHERE email = $2`,
+    const updateResult = await pool.query(
+      `
+      UPDATE users
+      SET password_hash = $1
+      WHERE LOWER(email) = LOWER($2)
+      RETURNING id
+      `,
       [passwordHash, cleanEmail]
     );
+
+    if (updateResult.rows.length === 0) {
+      pendingResets.delete(cleanEmail);
+
+      return res.status(404).json({
+        success: false,
+        message: "Account not found.",
+      });
+    }
 
     pendingResets.delete(cleanEmail);
 
@@ -438,8 +619,12 @@ router.post("/reset-password", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Reset password error:", error);
-    return res.status(500).json({ success: false, message: "Server error during password reset." });
+    console.error("RESET PASSWORD ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during password reset.",
+    });
   }
 });
 
