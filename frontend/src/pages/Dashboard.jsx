@@ -20,9 +20,26 @@ if (typeof document !== "undefined") {
   document.head.appendChild(styleEl);
 }
 
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch (error) {
+    console.error("Invalid stored user data:", error);
+    return null;
+  }
+}
+
+function getLocalDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = getStoredUser();
 
   const [tripType, setTripType] = useState("outstation");
   const [from, setFrom] = useState("");
@@ -168,24 +185,20 @@ export default function Dashboard() {
     try {
       setBookingVehicle(pendingVehicle.id);
 
-      const tripLabel = tripType === "local" ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)` : to.trim();
+      const tripLabel = tripType === "local"
+        ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)`
+        : to.trim();
       const scheduledDateTime = `${travelDate} ${tripTime || "10:00"}:00`;
-      const advanceAmt = tripType === "outstation" ? 200 : 150;
 
-      const rate = Number(pendingVehicle.rate_per_km || 0);
-      const calculatedTotalFare = distance * rate;
-
+      // Now includes tripType to satisfy backend requirements
       const response = await API.post("/payments/verify", {
-        userId: user.id,
+        tripType,
         from: from.trim(),
         to: tripLabel,
         distanceKm: Number(distance),
         vehicleType: pendingVehicle.vehicle_type,
         travelDate: scheduledDateTime,
-        amount: advanceAmt,
-        transactionRef: transactionRef.trim(),
-        totalFare: calculatedTotalFare,
-        ratePerKm: rate
+        transactionRef: transactionRef.trim()
       });
 
       setShowTermsModal(false);
@@ -238,7 +251,7 @@ export default function Dashboard() {
     navigate("/signin");
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
   const advanceAmount = tripType === "outstation" ? 200 : 150;
   const upiQrString = `upi://pay?pa=8465826241-3@ybl&pn=GoTrip&am=${advanceAmount}&cu=INR`;
 
