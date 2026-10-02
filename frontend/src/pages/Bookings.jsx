@@ -119,9 +119,9 @@ export default function Bookings() {
       {/* PAGE HEADER */}
       <section style={styles.bookingsHeader}>
         <div>
-          <span style={styles.bookingsEyebrow}>GOTRIP</span>
+          <span style={styles.bookingsEyebrow}>✨ GOTRIP VOYAGES</span>
           <h1 style={styles.h1}>My Bookings</h1>
-          <p style={styles.p}>Manage and track all your cab bookings in one place.</p>
+          <p style={styles.p}>Track your past adventures and upcoming road trips in style.</p>
         </div>
 
         <button
@@ -129,7 +129,7 @@ export default function Bookings() {
           style={styles.newBookingButton}
           onClick={() => navigate("/dashboard")}
         >
-          + New Booking
+          🚀 + New Booking
         </button>
       </section>
 
@@ -159,7 +159,7 @@ export default function Bookings() {
         </div>
 
         <div style={styles.summaryCard}>
-          <span style={styles.summaryIcon}>₹</span>
+          <span style={styles.summaryIcon}>💳</span>
           <div>
             <strong style={styles.summaryStrong}>
               {formatCurrency(
@@ -178,11 +178,11 @@ export default function Bookings() {
       {/* FILTERS */}
       <section style={styles.bookingFilters}>
         <div style={styles.bookingSearch}>
-          <span style={styles.searchIcon}>⌕</span>
+          <span style={styles.searchIcon}>🔍</span>
           <input
             style={styles.searchInput}
             type="text"
-            placeholder="Search by booking, location or vehicle..."
+            placeholder="Search by booking reference, location, or vehicle..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -211,23 +211,26 @@ export default function Bookings() {
       <section style={styles.bookingList}>
         {loading && (
           <div style={styles.bookingMessage}>
-            <div style={styles.loadingSpinner}></div>
-            <h3 style={styles.messageH3}>Loading your bookings...</h3>
-            <p style={styles.messageP}>Please wait a moment.</p>
+            <div style={styles.funnyLoaderContainer}>
+              <div style={styles.carMovingIcon}>🚗💨</div>
+              <div style={styles.loadingSpinner}></div>
+            </div>
+            <h3 style={styles.messageH3}>Warming up the engine...</h3>
+            <p style={styles.messageP}>Gathering your travel logs from the highway database!</p>
           </div>
         )}
 
         {!loading && error && (
           <div style={{ ...styles.bookingMessage, ...styles.errorMessage }}>
-            <div style={styles.errorIcon}>!</div>
-            <h3 style={styles.messageH3}>Unable to load bookings</h3>
+            <div style={styles.errorIcon}>⚠️</div>
+            <h3 style={styles.messageH3}>Oops! Speed bump encountered</h3>
             <p style={styles.messageP}>{error}</p>
             <button
               type="button"
               style={styles.retryButton}
               onClick={loadBookings}
             >
-              Try Again
+              🔄 Try Again
             </button>
           </div>
         )}
@@ -236,24 +239,24 @@ export default function Bookings() {
           !error &&
           filteredBookings.length === 0 && (
             <div style={styles.bookingMessage}>
-              <div style={styles.emptyIcon}>🚕</div>
+              <div style={styles.emptyIcon}>🧳</div>
               <h3 style={styles.messageH3}>
                 {bookings.length === 0
-                  ? "No bookings yet"
-                  : "No matching bookings"}
+                  ? "No bookings on the dashboard yet!"
+                  : "No matching trips found"}
               </h3>
               <p style={styles.messageP}>
                 {bookings.length === 0
-                  ? "Your upcoming and previous trips will appear here."
-                  : "Try changing your search or status filter."}
+                  ? "Looks like your garage is empty. Time to plan an epic road trip!"
+                  : "Try loosening up your search keywords or filter settings."}
               </p>
               {bookings.length === 0 && (
                 <button
                   type="button"
-                  style={{ ...styles.newBookingButton, marginTop: "16px" }}
+                  style={{ ...styles.newBookingButton, marginTop: "20px" }}
                   onClick={() => navigate("/dashboard")}
                 >
-                  Book Your First Trip
+                  🗺️ Book Your First Adventure
                 </button>
               )}
             </div>
@@ -341,7 +344,7 @@ export default function Bookings() {
                   </div>
 
                   <div style={{ ...styles.bookingDetail, borderRight: "none" }}>
-                    <span style={styles.detailIcon}>₹</span>
+                    <span style={styles.detailIcon}>💰</span>
                     <div>
                       <span style={styles.detailLabel}>Total Fare</span>
                       <strong style={{ ...styles.detailValue, color: "#2563eb" }}>
@@ -379,7 +382,7 @@ export default function Bookings() {
           <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>BOOKING INSPECTION</span>
+                <span style={styles.modalEyebrow}>TRIP INSPECTION</span>
                 <h3 style={styles.modalTitle}>{selectedBooking.booking_reference}</h3>
               </div>
               <button
@@ -455,12 +458,12 @@ export default function Bookings() {
   );
 }
 
-// Professional inline design system styling matching GoTrip
+// Professional and funny design system styling matching GoTrip standards
 const styles = {
   bookingsPage: {
     maxWidth: "1000px",
     margin: "0 auto",
-    padding: "30px 20px",
+    padding: "40px 20px",
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
     color: "#1e293b",
   },
@@ -468,7 +471,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "30px",
+    marginBottom: "32px",
     flexWrap: "wrap",
     gap: "16px",
   },
@@ -476,18 +479,19 @@ const styles = {
     fontSize: "12px",
     fontWeight: "800",
     color: "#2563eb",
-    letterSpacing: "1px",
-    marginBottom: "4px",
+    letterSpacing: "1.5px",
+    marginBottom: "6px",
     display: "block",
   },
   h1: {
-    fontSize: "26px",
+    fontSize: "30px",
     fontWeight: "800",
     color: "#0f172a",
     margin: "0 0 6px 0",
+    letterSpacing: "-0.5px",
   },
   p: {
-    fontSize: "14px",
+    fontSize: "15px",
     color: "#64748b",
     margin: "0",
   },
@@ -495,58 +499,60 @@ const styles = {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     border: "none",
-    padding: "10px 18px",
-    borderRadius: "8px",
-    fontWeight: "600",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    fontWeight: "700",
     fontSize: "14px",
     cursor: "pointer",
-    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
-    transition: "background-color 0.2s",
+    boxShadow: "0 6px 16px rgba(37, 99, 235, 0.3)",
+    transition: "transform 0.15s ease",
   },
   bookingSummary: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: "20px",
-    marginBottom: "30px",
+    marginBottom: "32px",
   },
   summaryCard: {
     background: "#ffffff",
-    padding: "20px",
-    borderRadius: "14px",
+    padding: "24px",
+    borderRadius: "16px",
     border: "1px solid #e2e8f0",
     display: "flex",
     alignItems: "center",
-    gap: "16px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)",
+    gap: "18px",
+    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.03)",
   },
   summaryIcon: {
-    fontSize: "24px",
+    fontSize: "26px",
     backgroundColor: "#eff6ff",
-    padding: "12px",
-    borderRadius: "10px",
+    padding: "14px",
+    borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   summaryStrong: {
     display: "block",
-    fontSize: "22px",
-    fontWeight: "700",
+    fontSize: "24px",
+    fontWeight: "800",
     color: "#0f172a",
   },
   summarySpan: {
     fontSize: "13px",
     color: "#64748b",
+    fontWeight: "600",
   },
   bookingFilters: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
-    marginBottom: "30px",
+    gap: "18px",
+    marginBottom: "32px",
     background: "#ffffff",
-    padding: "18px",
-    borderRadius: "14px",
+    padding: "20px",
+    borderRadius: "16px",
     border: "1px solid #e2e8f0",
+    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.03)",
   },
   bookingSearch: {
     position: "relative",
@@ -555,19 +561,19 @@ const styles = {
   },
   searchIcon: {
     position: "absolute",
-    left: "14px",
-    fontSize: "18px",
-    color: "#94a3b8",
+    left: "16px",
+    fontSize: "16px",
   },
   searchInput: {
     width: "100%",
-    padding: "11px 14px 11px 40px",
-    borderRadius: "8px",
+    padding: "12px 16px 12px 46px",
+    borderRadius: "10px",
     border: "1px solid #cbd5e1",
     fontSize: "14px",
     outline: "none",
     backgroundColor: "#f8fafc",
     boxSizing: "border-box",
+    fontWeight: "600",
   },
   statusFilters: {
     display: "flex",
@@ -576,12 +582,12 @@ const styles = {
   },
   filterButton: {
     padding: "8px 16px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     border: "1px solid #cbd5e1",
     backgroundColor: "#ffffff",
     color: "#475569",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
     transition: "all 0.2s",
   },
@@ -589,6 +595,7 @@ const styles = {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     borderColor: "#2563eb",
+    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
   },
   bookingList: {
     display: "flex",
@@ -597,17 +604,18 @@ const styles = {
   },
   bookingCard: {
     background: "#ffffff",
-    borderRadius: "14px",
+    borderRadius: "18px",
     border: "1px solid #e2e8f0",
-    padding: "24px",
-    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.04)",
+    padding: "28px",
+    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)",
+    transition: "transform 0.2s ease",
   },
   bookingCardTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "20px",
-    paddingBottom: "14px",
+    paddingBottom: "16px",
     borderBottom: "1px solid #f1f5f9",
   },
   bookingReference: {
@@ -617,23 +625,23 @@ const styles = {
   },
   refLabel: {
     fontSize: "11px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#94a3b8",
     letterSpacing: "0.5px",
   },
   refValue: {
-    fontSize: "15px",
-    fontWeight: "700",
+    fontSize: "16px",
+    fontWeight: "800",
     color: "#0f172a",
   },
   statusBadge: {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    padding: "6px 12px",
+    padding: "6px 14px",
     borderRadius: "20px",
     fontSize: "12px",
-    fontWeight: "600",
+    fontWeight: "700",
     textTransform: "capitalize",
   },
   statusPending: {
@@ -667,9 +675,10 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#f8fafc",
-    padding: "16px",
-    borderRadius: "10px",
+    padding: "18px",
+    borderRadius: "12px",
     marginBottom: "20px",
+    border: "1px solid #e2e8f0",
   },
   locationBlock: {
     display: "flex",
@@ -679,13 +688,13 @@ const styles = {
   },
   locationLabel: {
     fontSize: "10px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#94a3b8",
   },
   locationValue: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#334155",
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "#1e293b",
   },
   routeLine: {
     display: "flex",
@@ -705,11 +714,11 @@ const styles = {
   },
   routeArrow: {
     fontSize: "14px",
-    fontWeight: "700",
+    fontWeight: "800",
   },
   bookingDetails: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
     gap: "16px",
     marginBottom: "20px",
   },
@@ -722,29 +731,30 @@ const styles = {
     fontSize: "18px",
     backgroundColor: "#f1f5f9",
     padding: "10px",
-    borderRadius: "8px",
+    borderRadius: "10px",
   },
   detailLabel: {
-    fontSize: "12px",
+    fontSize: "11px",
     color: "#64748b",
     display: "block",
+    fontWeight: "600",
   },
   detailValue: {
     fontSize: "14px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#0f172a",
   },
   bookingCardFooter: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: "16px",
+    paddingTop: "18px",
     borderTop: "1px solid #f1f5f9",
   },
   fareInfo: {
     fontSize: "13px",
     color: "#64748b",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   detailsButton: {
     backgroundColor: "transparent",
@@ -753,7 +763,7 @@ const styles = {
     padding: "8px 16px",
     borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -762,16 +772,30 @@ const styles = {
   },
   bookingMessage: {
     background: "#ffffff",
-    padding: "50px 20px",
-    borderRadius: "14px",
+    padding: "60px 20px",
+    borderRadius: "18px",
     textAlign: "center",
     border: "1px solid #e2e8f0",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
+  },
+  funnyLoaderContainer: {
+    position: "relative",
+    height: "50px",
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  carMovingIcon: {
+    fontSize: "24px",
+    position: "absolute",
+    animation: "bounceCar 1s infinite alternate ease-in-out",
   },
   messageH3: {
-    fontSize: "18px",
-    fontWeight: "700",
+    fontSize: "20px",
+    fontWeight: "800",
     color: "#0f172a",
-    margin: "10px 0 6px 0",
+    margin: "12px 0 6px 0",
   },
   messageP: {
     fontSize: "14px",
@@ -779,55 +803,44 @@ const styles = {
     margin: "0",
   },
   loadingSpinner: {
-    width: "36px",
-    height: "36px",
-    border: "3px solid #e2e8f0",
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
     borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
-    margin: "0 auto 12px auto",
   },
   errorMessage: {
     borderColor: "#fecaca",
     backgroundColor: "#fffdfd",
   },
   errorIcon: {
-    width: "36px",
-    height: "36px",
-    backgroundColor: "#fef2f2",
-    color: "#dc2626",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "18px",
-    fontWeight: "bold",
-    margin: "0 auto 12px auto",
+    fontSize: "36px",
+    marginBottom: "10px",
   },
   retryButton: {
     marginTop: "16px",
     backgroundColor: "#dc2626",
     color: "#ffffff",
     border: "none",
-    padding: "8px 16px",
+    padding: "10px 20px",
     borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   emptyIcon: {
-    fontSize: "36px",
+    fontSize: "42px",
     marginBottom: "10px",
   },
-  // Modal Styling
   modalOverlay: {
     position: "fixed",
     top: 0,
     left: 0,
     width: "100vw",
     height: "100vh",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    backdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -837,16 +850,16 @@ const styles = {
   modalCard: {
     backgroundColor: "#ffffff",
     width: "100%",
-    maxWidth: "500px",
-    borderRadius: "20px",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    maxWidth: "520px",
+    borderRadius: "24px",
+    boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
     overflow: "hidden",
   },
   modalHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px 24px",
+    padding: "22px 28px",
     borderBottom: "1px solid #e2e8f0",
     backgroundColor: "#f8fafc",
   },
@@ -871,23 +884,26 @@ const styles = {
     fontWeight: "bold",
     color: "#64748b",
     cursor: "pointer",
+    padding: "6px 10px",
+    borderRadius: "8px",
   },
   modalBody: {
-    padding: "24px",
+    padding: "28px",
+    maxHeight: "65vh",
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "18px",
   },
   modalRouteSummary: {
     backgroundColor: "#f8fafc",
-    padding: "14px 16px",
-    borderRadius: "10px",
+    padding: "16px 18px",
+    borderRadius: "12px",
     border: "1px solid #e2e8f0",
   },
   modalSubLabel: {
     fontSize: "10px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#64748b",
     display: "block",
     marginBottom: "2px",
@@ -896,6 +912,7 @@ const styles = {
     fontSize: "14px",
     color: "#0f172a",
     wordBreak: "break-word",
+    fontWeight: "700",
   },
   modalInfoGrid: {
     display: "grid",
@@ -904,43 +921,44 @@ const styles = {
   },
   modalInfoItem: {
     backgroundColor: "#f8fafc",
-    padding: "10px 12px",
-    borderRadius: "8px",
+    padding: "12px 14px",
+    borderRadius: "10px",
     border: "1px solid #e2e8f0",
     display: "flex",
     flexDirection: "column",
-    gap: "2px",
+    gap: "3px",
     fontSize: "13px",
     color: "#64748b",
+    fontWeight: "600",
   },
   modalTotalRow: {
     backgroundColor: "#eff6ff",
     border: "1px solid #bfdbfe",
-    padding: "14px 16px",
-    borderRadius: "10px",
+    padding: "16px 18px",
+    borderRadius: "12px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     color: "#1e40af",
-    fontWeight: "700",
+    fontWeight: "800",
   },
   modalTotalFareVal: {
-    fontSize: "18px",
+    fontSize: "20px",
     fontWeight: "800",
   },
   modalFooter: {
-    padding: "16px 24px",
+    padding: "18px 28px",
     borderTop: "1px solid #e2e8f0",
     backgroundColor: "#f8fafc",
     display: "flex",
     justifyContent: "flex-end",
   },
-  modalActionBtn: {
+  modalCloseAction: {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     border: "none",
-    padding: "10px 20px",
-    borderRadius: "8px",
+    padding: "12px 24px",
+    borderRadius: "10px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
