@@ -246,11 +246,21 @@ export default function Dashboard() {
 
   /*
   =========================
-  CONFIRM BOOKING (After Successful Payment Verification)
+  CONFIRM BOOKING (Trigger UPI Payment Intent & Save to DB)
   =========================
   */
   async function confirmBooking() {
     if (!pendingVehicle) return;
+
+    const advanceAmount = tripType === "outstation" ? "200" : "150";
+    const companyUpiId = "8465826241-3@ybl";
+    const transactionNote = `GoTrip Advance for ${pendingVehicle.vehicle_type} (${tripType.toUpperCase()})`;
+
+    // Construct standard UPI payment link (deep-link intent)
+    const upiDeepLink = `upi://pay?pa=${encodeURIComponent(companyUpiId)}&pn=${encodeURIComponent("GoTrip Cabs")}&am=${encodeURIComponent(advanceAmount)}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+
+    // Attempt redirection to UPI app
+    window.location.href = upiDeepLink;
 
     try {
       setShowTermsModal(false);
@@ -277,13 +287,13 @@ export default function Dashboard() {
 
       setSuccessModalMessage(
         response.data?.message ||
-        "Payment successful! Booking confirmed and waiting for admin review."
+        "Payment initiated! Booking created and waiting for admin review."
       );
       setSuccessActionCallback(() => () => navigate("/bookings"));
 
     } catch (error) {
       console.error("Booking error:", error);
-      alert(error.response?.data?.message || "Booking failed after payment simulation. Please try again.");
+      alert(error.response?.data?.message || "Booking failed. Please try again.");
     } finally {
       setBookingVehicle(null);
       setPendingVehicle(null);
@@ -904,6 +914,9 @@ export default function Dashboard() {
                 <p style={{ fontSize: "12px", color: "#3b82f6", margin: "0" }}>
                   Required to confirm vehicle reservation & driver assignment.
                 </p>
+                <div style={{ marginTop: "10px", fontSize: "12px", fontWeight: "700", color: "#334155" }}>
+                  Company UPI ID: <span style={{ color: "#2563eb" }}>8465826241-3@ybl</span>
+                </div>
               </div>
 
               {/* UPI OPTIONS */}
