@@ -2,6 +2,24 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
+// Embedded keyframes for animated loaders
+const loaderKeyframes = `
+@keyframes bounceCar {
+  0% { transform: translateX(-40px); }
+  100% { transform: translateX(40px); }
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+`;
+
+if (typeof document !== "undefined") {
+  const styleEl = document.createElement("style");
+  styleEl.innerHTML = loaderKeyframes;
+  document.head.appendChild(styleEl);
+}
+
 export default function Admin() {
   const navigate = useNavigate();
 
@@ -308,20 +326,18 @@ export default function Admin() {
 
   // -----------------------------------
   // SUPPORT TICKET MESSAGE HELPERS
-  // Public landing-page tickets currently store
-  // the email and query inside the message field.
   // -----------------------------------
   const getTicketEmail = (ticket) => {
     const message = String(ticket?.message || "");
-    const match = message.match(/(?:^|\\n)Email:\\s*([^\\n]+)/i);
+    const match = message.match(/(?:^|\n)Email:\s*([^\n]+)/i);
     return ticket?.email || (match ? match[1].trim() : "Not provided");
   };
 
   const getTicketDescription = (ticket) => {
     const message = String(ticket?.message || "");
     return message
-      .replace(/^Email:\\s*[^\\n]*\\s*/i, "")
-      .replace(/^Query Details:\\s*/i, "")
+      .replace(/^Email:\s*[^\n]*\s*/i, "")
+      .replace(/^Query Details:\s*/i, "")
       .trim() || message;
   };
 
@@ -408,7 +424,6 @@ export default function Admin() {
               🎧 Support Tickets ({ticketsList.filter(t => t.status === 'open' || t.status === 'in_progress').length})
             </button>
 
-            {/* CONTACT US BUTTON */}
             <button
               type="button"
               style={styles.navButton}
@@ -570,8 +585,11 @@ export default function Admin() {
           <div style={styles.tableWrapper}>
             {loading ? (
               <div style={styles.messageBox}>
-                <div style={styles.loadingSpinner}></div>
-                <p style={styles.messageText}>Loading system bookings...</p>
+                <div style={styles.funnyLoaderContainer}>
+                  <div style={styles.carMovingIcon}>🚗💨</div>
+                  <div style={styles.loadingSpinner}></div>
+                </div>
+                <p style={styles.messageText}>Admin dashboard loading travel data...</p>
               </div>
             ) : paginatedBookings.length === 0 ? (
               <div style={styles.messageBox}>
@@ -2039,18 +2057,30 @@ const styles = {
     textAlign: "center",
     color: "#64748b",
   },
+  funnyLoaderContainer: {
+    position: "relative",
+    height: "50px",
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  carMovingIcon: {
+    fontSize: "24px",
+    position: "absolute",
+    animation: "bounceCar 1s infinite alternate ease-in-out",
+  },
   messageText: {
     fontSize: "14px",
     fontWeight: "600",
     margin: "0",
   },
   loadingSpinner: {
-    width: "28px",
-    height: "28px",
-    border: "3px solid #e2e8f0",
+    width: "40px",
+    height: "40px",
+    border: "4px solid #e2e8f0",
     borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
-    margin: "0 auto 10px auto",
   },
 };
