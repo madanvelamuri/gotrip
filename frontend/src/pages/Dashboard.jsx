@@ -63,9 +63,9 @@ export default function Dashboard() {
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackComments, setFeedbackComments] = useState("");
 
-  // Notifications State, Filters, and Inspection Modal (Converted to Pop-up Modal)
+  // Notifications State, Filters, and Inspection Modal
   const [notifications, setNotifications] = useState([]);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [notificationFilter, setNotificationFilter] = useState("all");
   const [selectedAlert, setSelectedAlert] = useState(null);
 
@@ -126,7 +126,7 @@ export default function Dashboard() {
   // Handle View alert click (marks as read and opens inspection pop-up)
   const handleViewAlert = async (alertItem) => {
     setSelectedAlert(alertItem);
-    setShowNotificationsModal(false);
+    setShowNotifications(false);
 
     if (!alertItem.is_read) {
       try {
@@ -351,7 +351,7 @@ export default function Dashboard() {
         setTimeout(async () => {
           setChatMessages(prev => [...prev, { 
             sender: "bot", 
-            text: "I am escalating this conversation to our support admin team now. They will review and reply in your Alerts notification modal until this issue is resolved." 
+            text: "I am escalating this conversation to our support admin team now. They will review and reply in your Alerts notification bell until this issue is resolved." 
           }]);
           
           try {
@@ -364,7 +364,7 @@ export default function Dashboard() {
             setTimeout(() => {
               setChatMessages(prev => [...prev, { 
                 sender: "bot", 
-                text: "✅ Priority escalation ticket created! You can keep sending messages here or check your Alerts modal for admin updates." 
+                text: "✅ Priority escalation ticket created! You can keep sending messages here or check your Alerts bell for admin updates." 
               }]);
               setChatLoading(false);
             }, 1000);
@@ -443,19 +443,83 @@ export default function Dashboard() {
               </span>
             </div>
 
-            {/* ALERTS POP-UP BUTTON */}
-            <button
-              type="button"
-              style={styles.navButton}
-              onClick={() => setShowNotificationsModal(true)}
-            >
-              🔔 Alerts
-              {notifications.some(n => !n.is_read) && (
-                <span style={styles.notificationBadge}>
-                  {notifications.filter(n => !n.is_read).length}
-                </span>
+            {/* NOTIFICATION BELL & POPUP MENU WITH TABS */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                style={styles.navButton}
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                🔔 Alerts
+                {notifications.some(n => !n.is_read) && (
+                  <span style={styles.notificationBadge}>
+                    {notifications.filter(n => !n.is_read).length}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div style={styles.notificationDropdown}>
+                  <div style={styles.alertHeaderRow}>
+                    <h4 style={styles.notificationTitle}>Status Alerts</h4>
+                    {/* Notification Filter Tabs */}
+                    <div style={styles.alertFilterButtons}>
+                      <button
+                        type="button"
+                        style={{ ...styles.alertTabBtn, ...(notificationFilter === "all" ? styles.alertTabActive : {}) }}
+                        onClick={() => setNotificationFilter("all")}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        style={{ ...styles.alertTabBtn, ...(notificationFilter === "unread" ? styles.alertTabActive : {}) }}
+                        onClick={() => setNotificationFilter("unread")}
+                      >
+                        Unread
+                      </button>
+                      <button
+                        type="button"
+                        style={{ ...styles.alertTabBtn, ...(notificationFilter === "read" ? styles.alertTabActive : {}) }}
+                        onClick={() => setNotificationFilter("read")}
+                      >
+                        Read
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ maxHeight: "240px", overflowY: "auto" }}>
+                    {filteredNotifications.length === 0 ? (
+                      <p style={styles.noNotificationText}>No alerts found</p>
+                    ) : (
+                      filteredNotifications.map((n) => (
+                        <div 
+                          key={n.id} 
+                          style={{
+                            ...styles.notificationItem,
+                            backgroundColor: n.is_read ? "#ffffff" : "#f0fdf4"
+                          }}
+                        >
+                          <div style={{ flex: 1, paddingRight: "8px" }}>
+                            <strong style={{ display: "block", fontSize: "13px", color: "#0f172a" }}>
+                              {n.title} {!n.is_read && <span style={styles.dotIndicator}>•</span>}
+                            </strong>
+                            <p style={styles.alertSnippet}>{n.message}</p>
+                          </div>
+                          <button
+                            type="button"
+                            style={styles.alertViewBtn}
+                            onClick={() => handleViewAlert(n)}
+                          >
+                            View
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
 
             <button
               type="button"
@@ -938,98 +1002,6 @@ export default function Dashboard() {
 
 
       {/* =========================================
-          MODAL: ALERTS POP-UP DIALOG (REPLACING DROPDOWN)
-      ========================================= */}
-      {showNotificationsModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowNotificationsModal(false)}>
-          <div style={{ ...styles.modalCard, maxWidth: "460px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "22px" }}>🔔</span>
-                <div>
-                  <h3 style={styles.modalTitle}>Status Alerts</h3>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700" }}>System notifications & admin replies</span>
-                </div>
-              </div>
-              <button type="button" style={styles.closeModalButton} onClick={() => setShowNotificationsModal(false)}>✕</button>
-            </div>
-
-            <div style={{ padding: "20px 24px", backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              <div style={styles.alertFilterButtons}>
-                <button
-                  type="button"
-                  style={{ ...styles.alertTabBtn, ...(notificationFilter === "all" ? styles.alertTabActive : {}) }}
-                  onClick={() => setNotificationFilter("all")}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  style={{ ...styles.alertTabBtn, ...(notificationFilter === "unread" ? styles.alertTabActive : {}) }}
-                  onClick={() => setNotificationFilter("unread")}
-                >
-                  Unread
-                </button>
-                <button
-                  type="button"
-                  style={{ ...styles.alertTabBtn, ...(notificationFilter === "read" ? styles.alertTabActive : {}) }}
-                  onClick={() => setNotificationFilter("read")}
-                >
-                  Read
-                </button>
-              </div>
-            </div>
-
-            <div style={{ maxHeight: "320px", overflowY: "auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              {filteredNotifications.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "30px 0", color: "#64748b" }}>
-                  <p style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>No alerts found</p>
-                </div>
-              ) : (
-                filteredNotifications.map((n) => (
-                  <div 
-                    key={n.id} 
-                    style={{
-                      ...styles.notificationItem,
-                      backgroundColor: n.is_read ? "#ffffff" : "#f0fdf4",
-                      border: "1px solid #e2e8f0",
-                      padding: "14px",
-                      borderRadius: "12px"
-                    }}
-                  >
-                    <div style={{ flex: 1, paddingRight: "10px" }}>
-                      <strong style={{ display: "block", fontSize: "13px", color: "#0f172a", marginBottom: "4px" }}>
-                        {n.title} {!n.is_read && <span style={styles.dotIndicator}>•</span>}
-                      </strong>
-                      <p style={{ ...styles.alertSnippet, WebkitLineClamp: 3 }}>{n.message}</p>
-                    </div>
-                    <button
-                      type="button"
-                      style={styles.alertViewBtn}
-                      onClick={() => handleViewAlert(n)}
-                    >
-                      View
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button
-                type="button"
-                style={styles.modalActionBtn}
-                onClick={() => setShowNotificationsModal(false)}
-              >
-                Close Alerts
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* =========================================
           MODAL: ALERT INSPECTION POP-UP (VIEW DETAILS)
       ========================================= */}
       {selectedAlert && (
@@ -1429,6 +1401,18 @@ const styles = {
     borderRadius: "50%",
     fontSize: "9px",
     fontWeight: "bold",
+  },
+  notificationDropdown: {
+    position: "absolute",
+    right: 0,
+    top: "calc(100% + 12px)",
+    width: "340px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #cbd5e1",
+    borderRadius: "14px",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.18)",
+    padding: "16px",
+    zIndex: 9999,
   },
   alertHeaderRow: {
     display: "flex",
