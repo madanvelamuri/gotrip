@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -169,8 +168,8 @@ app.use("/api/payments", paymentRoutes);
 // Admin API
 app.use("/api/admin", adminRoutes);
 
-// Location and Distance API
-app.use("/api/locations", locationRoutes);
+// Location and Distance API (Fixed to singular 'location' to match frontend)
+app.use("/api/location", locationRoutes);
 
 // Support API
 app.use("/api/support", supportRoutes);
