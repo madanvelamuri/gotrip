@@ -23,7 +23,7 @@ router.post("/verify", async (req, res) => {
     // Generate unique booking reference to satisfy NOT NULL constraint
     const bookingRef = `GT-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // 1. Create the booking record with booking_reference
+    // 1. Create the booking record in 'pending' status awaiting admin approval
     const bookingResult = await pool.query(
       `
       INSERT INTO bookings (
