@@ -151,13 +151,24 @@ export default function Dashboard() {
 
   async function confirmBooking() {
     if (!pendingVehicle) return;
-    if (!transactionRef.trim()) { alert("Please enter the UPI Transaction Reference ID / UTR number."); return; }
+    if (!user?.id) {
+      alert("Your session is not valid. Please sign in again.");
+      navigate("/signin");
+      return;
+    }
+    if (!transactionRef.trim()) {
+      alert("Please enter the UPI Transaction Reference ID / UTR number.");
+      return;
+    }
+    if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) {
+      alert("Please search your route or select a valid rental package first.");
+      return;
+    }
 
     try {
-      setShowTermsModal(false);
       setBookingVehicle(pendingVehicle.id);
 
-      const tripLabel = tripType === "local" ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)` : to;
+      const tripLabel = tripType === "local" ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)` : to.trim();
       const scheduledDateTime = `${travelDate} ${tripTime || "10:00"}:00`;
       const advanceAmt = tripType === "outstation" ? 200 : 150;
 
@@ -166,9 +177,9 @@ export default function Dashboard() {
 
       const response = await API.post("/payments/verify", {
         userId: user.id,
-        from,
+        from: from.trim(),
         to: tripLabel,
-        distanceKm: distance,
+        distanceKm: Number(distance),
         vehicleType: pendingVehicle.vehicle_type,
         travelDate: scheduledDateTime,
         amount: advanceAmt,
@@ -177,13 +188,15 @@ export default function Dashboard() {
         ratePerKm: rate
       });
 
-      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully!");
+      setShowTermsModal(false);
+      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully. It is pending admin verification.");
       setSuccessActionCallback(() => () => navigate("/bookings"));
+      setPendingVehicle(null);
+      setTransactionRef("");
     } catch (error) {
       alert(error.response?.data?.message || "Booking submission failed.");
     } finally {
       setBookingVehicle(null);
-      setPendingVehicle(null);
     }
   }
 
@@ -191,7 +204,7 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       await API.post("/support/ticket", { userId: user?.id, subject: supportSubject, message: supportMessage });
-      setSuccessModalMessage("Support ticket submitted successfully!");
+      setSuccessModalMessage("Support ticket submitted!");
       setShowSupportModal(false);
       setSupportMessage("");
     } catch (error) { alert("Could not submit support request."); }
