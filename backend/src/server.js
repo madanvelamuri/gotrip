@@ -1,7 +1,9 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+
+// Initialize environment variables first
+dotenv.config();
 
 import authRoutes from "./routes/auth.js";
 import pricingRoutes from "./routes/pricing.js";
@@ -10,10 +12,8 @@ import adminRoutes from "./routes/admin.js";
 import locationRoutes from "./routes/locations.js";
 import supportRoutes from "./routes/support.js";
 import paymentRoutes from "./routes/payments.js";
-app.use("/api/payments", paymentRoutes);
-dotenv.config();
 
-const app = express();
+const app = express(); // <-- app initialized here first
 
 // CORS CONFIGURATION
 const allowedOrigins = [
@@ -27,11 +27,9 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without an Origin header (Postman, curl, etc.)
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-
       return callback(
         new Error("CORS policy violation: This origin is not allowed.")
       );
@@ -60,13 +58,14 @@ app.get("/", (req, res) => {
   });
 });
 
-// API ROUTES
+// API ROUTES (Payment routes registered safely after app initialization)
 app.use("/api/auth", authRoutes);
 app.use("/api/pricing", pricingRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/payments", paymentRoutes); // <-- Registered properly here
 
 // 404 HANDLER
 app.use((req, res) => {
