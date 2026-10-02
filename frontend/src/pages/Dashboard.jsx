@@ -4,6 +4,24 @@ import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import LocationInput from "../components/LocationInput";
 
+// Embedded keyframes for the animated loader
+const loaderKeyframes = `
+@keyframes bounceCar {
+  0% { transform: translateX(-40px); }
+  100% { transform: translateX(40px); }
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+`;
+
+if (typeof document !== "undefined") {
+  const styleEl = document.createElement("style");
+  styleEl.innerHTML = loaderKeyframes;
+  document.head.appendChild(styleEl);
+}
+
 export default function Dashboard() {
 
   const navigate = useNavigate();
@@ -407,7 +425,7 @@ export default function Dashboard() {
     <div style={styles.dashboardPage}>
 
       {/* =========================
-          NAVIGATION HEADER (CLEAN & SPACIOUS)
+          NAVIGATION HEADER
       ========================= */}
       <header style={styles.dashboardNav}>
         <div style={styles.navContainer}>
