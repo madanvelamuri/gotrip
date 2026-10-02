@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [pendingVehicle, setPendingVehicle] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [transactionRef, setTransactionRef] = useState("");
 
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -163,7 +164,13 @@ export default function Dashboard() {
     if (!token) { alert("Please sign in before booking."); navigate("/signin"); return; }
     setPendingVehicle(vehicle);
     setTransactionRef("");
+    setShowPaymentModal(false);
     setShowTermsModal(true);
+  }
+
+  function handleTermsAccept() {
+    setShowTermsModal(false);
+    setShowPaymentModal(true);
   }
 
   async function confirmBooking() {
@@ -201,7 +208,7 @@ export default function Dashboard() {
         transactionRef: transactionRef.trim()
       });
 
-      setShowTermsModal(false);
+      setShowPaymentModal(false);
       setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully. It is pending admin verification.");
       setSuccessActionCallback(() => () => navigate("/bookings"));
       setPendingVehicle(null);
@@ -401,13 +408,53 @@ export default function Dashboard() {
 
       {showTermsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTermsModal(false)}>
+          <div style={{ ...styles.modalCard, maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <span style={styles.modalEyebrow}>PLEASE REVIEW BEFORE BOOKING</span>
+                <h2 style={styles.modalTitle}>📋 GoTrip Terms & Conditions</h2>
+              </div>
+              <button type="button" style={styles.closeModalButton} onClick={() => setShowTermsModal(false)}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              <div style={styles.ruleSection}>
+                <h4 style={styles.ruleTitle}>🚘 Driver Accommodation for Trips Over 24 Hours</h4>
+                <ul style={styles.ruleList}>
+                  <li>For trips lasting more than 24 hours, the customer must arrange and provide the driver with food and room accommodation for the duration of the trip.</li>
+                </ul>
+              </div>
+              <div style={styles.ruleSection}>
+                <h4 style={styles.ruleTitle}>💰 Fare, Toll & Parking Charges</h4>
+                <ul style={styles.ruleList}>
+                  <li>The fare displayed by GoTrip excludes toll charges and parking fees.</li>
+                  <li>All toll charges and parking fees incurred during the trip must be paid separately by the customer.</li>
+                </ul>
+              </div>
+              <div style={styles.ruleSection}>
+                <h4 style={styles.ruleTitle}>ℹ️ Booking & Payment</h4>
+                <ul style={styles.ruleList}>
+                  <li>Please verify your pickup location, destination, travel date, and selected vehicle before continuing.</li>
+                  <li>After accepting these terms, you will be taken to the existing GoTrip UPI payment step to submit your advance payment details.</li>
+                </ul>
+              </div>
+            </div>
+            <div style={styles.modalFooter}>
+              <button type="button" style={{ ...styles.modalCancelAction, marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
+              <button type="button" style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }} onClick={handleTermsAccept}>Accept & Continue to Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPaymentModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowPaymentModal(false)}>
           <div style={{ ...styles.modalCard, maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <span style={styles.modalEyebrow}>SECURE CHECKOUT & ADVANCE PAYMENT</span>
                 <h2 style={styles.modalTitle}>💳 Scan QR or Pay via UPI</h2>
               </div>
-              <button style={styles.closeModalButton} onClick={() => setShowTermsModal(false)}>✕</button>
+              <button type="button" style={styles.closeModalButton} onClick={() => setShowPaymentModal(false)}>✕</button>
             </div>
             <div style={styles.modalBody}>
               <div style={{ backgroundColor: "#eff6ff", padding: "16px", borderRadius: "14px", textAlign: "center", border: "1px solid #bfdbfe" }}>
@@ -436,7 +483,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={styles.modalFooter}>
-              <button style={{ ...styles.modalCancelAction, marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
+              <button style={{ ...styles.modalCancelAction, marginRight: "10px" }} onClick={() => setShowPaymentModal(false)}>Cancel</button>
               <button type="button" disabled={bookingVehicle !== null} style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a", opacity: bookingVehicle !== null ? 0.65 : 1 }} onClick={confirmBooking}>{bookingVehicle !== null ? "Submitting..." : "Verify Payment & Confirm Booking 🚀"}</button>
             </div>
           </div>
