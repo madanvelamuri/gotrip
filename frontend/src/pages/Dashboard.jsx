@@ -52,6 +52,7 @@ export default function Dashboard() {
   // Booking Terms & Payment Gateway modal state
   const [pendingVehicle, setPendingVehicle] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [selectedUpi, setSelectedUpi] = useState("gpay"); // Default selected UPI app
 
   // Support & Feedback Modal States
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -245,7 +246,7 @@ export default function Dashboard() {
 
   /*
   =========================
-  CONFIRM BOOKING (After Payment & Terms Acceptance)
+  CONFIRM BOOKING (After Successful Payment Verification)
   =========================
   */
   async function confirmBooking() {
@@ -276,13 +277,13 @@ export default function Dashboard() {
 
       setSuccessModalMessage(
         response.data?.message ||
-        "Booking created successfully! Waiting for admin review."
+        "Payment successful! Booking confirmed and waiting for admin review."
       );
       setSuccessActionCallback(() => () => navigate("/bookings"));
 
     } catch (error) {
       console.error("Booking error:", error);
-      alert(error.response?.data?.message || "Booking failed. Please try again.");
+      alert(error.response?.data?.message || "Booking failed after payment simulation. Please try again.");
     } finally {
       setBookingVehicle(null);
       setPendingVehicle(null);
@@ -872,16 +873,16 @@ export default function Dashboard() {
 
 
       {/* =========================
-          TERMS & PAYMENT GATEWAY MODAL (ADVANCE DEPOSIT)
+          TERMS & UPI PAYMENT GATEWAY MODAL (ADVANCE DEPOSIT)
       ========================= */}
       {showTermsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTermsModal(false)}>
-          <div style={{ ...styles.modalCard, maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...styles.modalCard, maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
             
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>SECURE CHECKOUT</span>
-                <h2 style={styles.modalTitle}>💳 Advance Payment Gateway</h2>
+                <span style={styles.modalEyebrow}>SECURE CHECKOUT & ADVANCE PAYMENT</span>
+                <h2 style={styles.modalTitle}>💳 Select UPI & Pay Advance</h2>
               </div>
               <button
                 type="button"
@@ -905,12 +906,47 @@ export default function Dashboard() {
                 </p>
               </div>
 
+              {/* UPI OPTIONS */}
+              <div>
+                <label style={{ ...styles.fieldLabel, marginBottom: "10px" }}>Choose UPI Payment App</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  {[
+                    { id: "gpay", name: "Google Pay", icon: "🌐" },
+                    { id: "phonepe", name: "PhonePe", icon: "🟣" },
+                    { id: "paytm", name: "Paytm UPI", icon: "💙" },
+                    { id: "bhim", name: "BHIM UPI", icon: "🇮🇳" }
+                  ].map((upi) => (
+                    <div
+                      key={upi.id}
+                      onClick={() => setSelectedUpi(upi.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "12px 14px",
+                        borderRadius: "12px",
+                        border: selectedUpi === upi.id ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                        backgroundColor: selectedUpi === upi.id ? "#eff6ff" : "#f8fafc",
+                        cursor: "pointer",
+                        fontWeight: "700",
+                        fontSize: "13px",
+                        color: "#1e293b",
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      <span style={{ fontSize: "18px" }}>{upi.icon}</span>
+                      <span>{upi.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div style={styles.ruleSection}>
-                <h4 style={{ ...styles.ruleTitle, color: "#1e3a8a" }}>📜 Advance Payment & Cancellation Policy</h4>
+                <h4 style={{ ...styles.ruleTitle, color: "#1e3a8a" }}>📜 Payment & Refund Policy</h4>
                 <ul style={styles.ruleList}>
                   <li><strong>Non-Refundable Deposit:</strong> The advance amount (₹{tripType === "outstation" ? "200" : "150"}) is <strong>non-refundable</strong> if cancelled by the customer.</li>
-                  <li><strong>GoTrip Cancellation Guarantee:</strong> If the GoTrip team or assigned driver cancels your trip for any reason, you will receive a <strong>100% full refund</strong> instantly.</li>
-                  <li><strong>Remaining Balance:</strong> The remaining fare balance is to be paid directly to the driver upon trip completion.</li>
+                  <li><strong>GoTrip Guarantee:</strong> If the GoTrip team or assigned driver cancels your trip, you will receive a <strong>100% full refund</strong> instantly.</li>
+                  <li><strong>Remaining Balance:</strong> Balance fare is paid directly to the driver upon trip completion.</li>
                 </ul>
               </div>
             </div>
@@ -928,7 +964,7 @@ export default function Dashboard() {
                 style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }}
                 onClick={confirmBooking}
               >
-                Pay ₹{tripType === "outstation" ? "200" : "150"} & Confirm Ride 🚀
+                Pay ₹{tripType === "outstation" ? "200" : "150"} via {selectedUpi.toUpperCase()} & Confirm Ride 🚀
               </button>
             </div>
 
