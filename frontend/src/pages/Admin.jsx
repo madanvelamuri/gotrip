@@ -307,6 +307,25 @@ export default function Admin() {
   }
 
   // -----------------------------------
+  // SUPPORT TICKET MESSAGE HELPERS
+  // Public landing-page tickets currently store
+  // the email and query inside the message field.
+  // -----------------------------------
+  const getTicketEmail = (ticket) => {
+    const message = String(ticket?.message || "");
+    const match = message.match(/(?:^|\\n)Email:\\s*([^\\n]+)/i);
+    return ticket?.email || (match ? match[1].trim() : "Not provided");
+  };
+
+  const getTicketDescription = (ticket) => {
+    const message = String(ticket?.message || "");
+    return message
+      .replace(/^Email:\\s*[^\\n]*\\s*/i, "")
+      .replace(/^Query Details:\\s*/i, "")
+      .trim() || message;
+  };
+
+  // -----------------------------------
   // FORMAT DATE & TIME
   // -----------------------------------
   const formatDateTime = (dateStr) => {
@@ -381,7 +400,10 @@ export default function Admin() {
             <button
               type="button"
               style={styles.navButton}
-              onClick={() => setShowTicketsModal(true)}
+              onClick={async () => {
+                await loadSupportData();
+                setShowTicketsModal(true);
+              }}
             >
               🎧 Support Tickets ({ticketsList.filter(t => t.status === 'open' || t.status === 'in_progress').length})
             </button>
@@ -912,8 +934,10 @@ export default function Admin() {
                     <thead>
                       <tr style={styles.tableHeaderRow}>
                         <th style={styles.th}>Ticket ID</th>
+                        <th style={styles.th}>Customer Email</th>
                         <th style={styles.th}>Subject</th>
-                        <th style={styles.th}>Message</th>
+                        <th style={styles.th}>Query Description</th>
+                        <th style={styles.th}>Date</th>
                         <th style={styles.th}>Status</th>
                         <th style={styles.th}>Action</th>
                       </tr>
@@ -933,8 +957,10 @@ export default function Admin() {
                               #TK-{ticket.id}
                             </div>
                           </td>
+                          <td style={styles.td}>{getTicketEmail(ticket)}</td>
                           <td style={styles.td}><strong>{ticket.subject}</strong></td>
-                          <td style={styles.td}>{ticket.message}</td>
+                          <td style={styles.td}>{getTicketDescription(ticket)}</td>
+                          <td style={styles.td}>{formatDateTime(ticket.created_at)}</td>
                           <td style={styles.td}>
                             <span style={{
                               padding: "4px 10px",
@@ -1003,12 +1029,16 @@ export default function Admin() {
             <form onSubmit={handleTicketResolutionSubmit} style={styles.modalBody}>
               <div style={styles.modalRouteSummary}>
                 <div style={{ width: "100%" }}>
-                  <small style={styles.modalSubLabel}>ISSUE SUBJECT</small>
-                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>{selectedTicket.subject}</strong>
+                  <small style={styles.modalSubLabel}>CUSTOMER EMAIL</small>
+                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>{getTicketEmail(selectedTicket)}</strong>
+                  <div style={{ marginTop: "8px" }}>
+                    <small style={styles.modalSubLabel}>ISSUE SUBJECT</small>
+                    <strong style={{ display: "block", fontSize: "14px", color: "#0f172a" }}>{selectedTicket.subject}</strong>
+                  </div>
                   <div style={{ marginTop: "8px" }}>
                     <small style={styles.modalSubLabel}>CUSTOMER MESSAGE</small>
-                    <p style={{ fontSize: "13px", color: "#334155", margin: "2px 0 0 0", lineHeight: "1.4" }}>
-                      {selectedTicket.message}
+                    <p style={{ fontSize: "13px", color: "#334155", margin: "2px 0 0 0", lineHeight: "1.4", whiteSpace: "pre-wrap" }}>
+                      {getTicketDescription(selectedTicket)}
                     </p>
                   </div>
                 </div>

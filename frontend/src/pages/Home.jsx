@@ -9,7 +9,7 @@ export default function Home() {
 
   // Contact Form States (Triggers to Admin Portal Support Tickets)
   const [contactEmail, setContactEmail] = useState("");
-  const [contactSubject, setContactSubject] = useState("General Query from Landing Page");
+  const [contactSubject, setContactSubject] = useState("General Query");
   const [contactMessage, setContactMessage] = useState("");
   const [submittingContact, setSubmittingContact] = useState(false);
 
