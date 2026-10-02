@@ -1,3 +1,4 @@
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -6,171 +7,231 @@ import { Resend } from "resend";
 
 const router = express.Router();
 
-// Temporary in-memory stores for pending verifications
+// Store pending signup verifications temporarily.
+// These are cleared when the OTP expires or signup succeeds.
 const pendingSignups = new Map();
-const pendingLogins = new Map(); // Format: { identifier: { otp, expiresAt, user } }
 
-// Initialize Resend with your API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only when an API key is configured.
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-async function sendEmailOtp(toEmail, otpCode) {
-  try {
-    // If API key is missing, fall back safely to console simulation
-    if (!process.env.RESEND_API_KEY) {
-      console.log(`\n================================`);
-      console.log(`📧 [SIMULATED EMAIL] OTP for ${toEmail}: ${otpCode}`);
-      console.log(`================================\n`);
-      return { success: true };
-    }
-
-    console.log(`🔄 Sending live email via Resend to ${toEmail}...`);
-
-    await resend.emails.send({
-      from: "GoTrip Support <onboarding@resend.dev>", // Resend's default free testing domain
-      to: [toEmail],
-      subject: "Your GoTrip Verification Code",
-      text: `Your 6-digit OTP code is: ${otpCode}. It expires in 5 minutes.`,
-    });
-
-    console.log(`📧 [RESEND SUCCESS] Live email dispatched successfully to ${toEmail}`);
-    return { success: true };
-  } catch (err) {
-    // FIX: Safely catch Resend API errors (like 403 free-tier restrictions) and provide console fallback
-    console.error("🚨 RESEND FAILED WITH ERROR:", err.message || err);
-    console.log(`\n==================================================`);
-    console.log(`📧 [FALLBACK OTP CODE] For ${toEmail}: ${otpCode}`);
-    console.log(`(Note: Resend free tier restricts external emails until domain is verified)`);
-    console.log(`==================================================\n`);
-    return { success: true };
-  }
-}
-
+// Generate a six-digit OTP.
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// Generate JWT token.
 function createToken(user) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured.");
+  }
+
   return jwt.sign(
     {
       id: user.id,
       email: user.email,
       mobile: user.mobile,
-      role: user.role
+      role: user.role,
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "7d"
+      expiresIn: "7d",
     }
   );
 }
 
-/*
-=========================================
-SIGN UP ROUTES (EMAIL-ONLY OTP DISPATCH)
-=========================================
-*/
+// Send signup OTP through Resend.
+async function sendEmailOtp(toEmail, otpCode) {
+  // Development-only fallback.
+  if (!resend) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("RESEND_API_KEY is not configured.");
+    }
+
+    console.log("------------------------------------");
+    console.log(`Development OTP for ${toEmail}: ${otpCode}`);
+    console.log("------------------------------------");
+
+    return;
+  }
+
+  const { data, error } = await resend.emails.send({
+    from:
+      process.env.EMAIL_FROM ||
+      "GoTrip Support <onboarding@resend.dev>",
+    to: [toEmail],
+    subject: "Your GoTrip Verification Code",
+    text: `Your GoTrip verification code is ${otpCode}. It expires in 5 minutes.`,
+  });
+
+  if (error) {
+    console.error("Resend email error:", error);
+    throw new Error(error.message || "Unable to send verification email.");
+  }
+
+  console.log("Signup OTP email sent:", data?.id);
+}
 
 /*
-STEP 1: SIGN UP - SEND OTP TO EMAIL (MOBILE OPTIONAL)
+================================================
+SIGN UP - STEP 1: SEND EMAIL OTP
+POST /api/auth/signup-send-otp
+================================================
 */
+
 router.post("/signup-send-otp", async (req, res) => {
   try {
     const { name, email, mobile, password } = req.body;
 
-    if (!name || !email || !password || !email.includes("@")) {
+    if (!name || !email || !password) {
       return res.status(400).json({
-        message: "Name, a valid email address, and password are required."
+        success: false,
+        message: "Name, email and password are required.",
       });
     }
 
+    const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
-    const cleanMobile = mobile ? mobile.trim() : null;
+    const cleanMobile = mobile?.trim() || null;
 
-    // Check if user already exists in PostgreSQL database by email or mobile (if provided)
-    const existingQuery = cleanMobile 
-      ? `SELECT id FROM users WHERE email = $1 OR mobile = $2`
-      : `SELECT id FROM users WHERE email = $1`;
-    const existingParams = cleanMobile ? [cleanEmail, cleanMobile] : [cleanEmail];
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address.",
+      });
+    }
 
-    const existing = await pool.query(existingQuery, existingParams);
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must contain at least 6 characters.",
+      });
+    }
+
+    // Check whether email or mobile already exists.
+    const existingQuery = cleanMobile
+      ? `SELECT id FROM users WHERE email = $1 OR mobile = $2 LIMIT 1`
+      : `SELECT id FROM users WHERE email = $1 LIMIT 1`;
+
+    const existingParams = cleanMobile
+      ? [cleanEmail, cleanMobile]
+      : [cleanEmail];
+
+    const existing = await pool.query(
+      existingQuery,
+      existingParams
+    );
 
     if (existing.rows.length > 0) {
       return res.status(409).json({
-        message: "User with this email or mobile already exists."
+        success: false,
+        message: "An account with this email or mobile already exists.",
       });
     }
 
-    // Generate 6-digit OTP and expiration (5 minutes)
     const otp = generateOTP();
     const expiresAt = Date.now() + 5 * 60 * 1000;
 
-    // Save temporary data using email as the identifier key
+    // Store pending signup information.
     pendingSignups.set(cleanEmail, {
       otp,
       expiresAt,
-      name,
+      name: cleanName,
       email: cleanEmail,
       mobile: cleanMobile,
-      password
+      password,
     });
 
-    // Trigger Real Email OTP via Resend (with robust console fallback)
-    await sendEmailOtp(cleanEmail, otp);
+    // Send OTP.
+    try {
+      await sendEmailOtp(cleanEmail, otp);
+    } catch (emailError) {
+      pendingSignups.delete(cleanEmail);
 
-    res.json({
+      return res.status(502).json({
+        success: false,
+        message: "Unable to send OTP email. Please try again later.",
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: `OTP sent successfully to your email address`
+      message: "Signup OTP sent successfully.",
     });
 
   } catch (error) {
-    console.error("Error in /signup-send-otp:", error);
-    res.status(500).json({ message: "Server error while sending OTP" });
+    console.error("Signup OTP error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while sending signup OTP.",
+    });
   }
 });
 
 
 /*
-STEP 2: VERIFY SIGNUP OTP & CREATE ACCOUNT IN POSTGRESQL
+================================================
+SIGN UP - STEP 2: VERIFY OTP AND CREATE ACCOUNT
+POST /api/auth/verify-otp-signup
+================================================
 */
+
 router.post("/verify-otp-signup", async (req, res) => {
   try {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
       return res.status(400).json({
-        message: "Email and OTP are required."
+        success: false,
+        message: "Email and OTP are required.",
       });
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
     const pendingUser = pendingSignups.get(cleanEmail);
 
     if (!pendingUser) {
       return res.status(400).json({
-        message: "No pending signup found for this email. Please try again."
+        success: false,
+        message: "No pending signup found. Please request a new OTP.",
       });
     }
 
     if (Date.now() > pendingUser.expiresAt) {
       pendingSignups.delete(cleanEmail);
+
       return res.status(400).json({
-        message: "OTP has expired. Please request a new one."
+        success: false,
+        message: "OTP has expired. Please request a new OTP.",
       });
     }
 
-    if (pendingUser.otp !== otp.trim()) {
+    if (pendingUser.otp !== cleanOtp) {
       return res.status(400).json({
-        message: "Invalid OTP code. Please try again."
+        success: false,
+        message: "Invalid OTP. Please check and try again.",
       });
     }
 
-    // Hash password securely
-    const passwordHash = await bcrypt.hash(pendingUser.password, 12);
+    // Hash password before storing it.
+    const passwordHash = await bcrypt.hash(
+      pendingUser.password,
+      12
+    );
 
-    // Insert user into PostgreSQL database
+    // Create user in PostgreSQL.
     const result = await pool.query(
       `
-      INSERT INTO users (name, email, mobile, password_hash)
+      INSERT INTO users (
+        name,
+        email,
+        mobile,
+        password_hash
+      )
       VALUES ($1, $2, $3, $4)
       RETURNING id, name, email, mobile, role
       `,
@@ -178,154 +239,119 @@ router.post("/verify-otp-signup", async (req, res) => {
         pendingUser.name,
         pendingUser.email,
         pendingUser.mobile,
-        passwordHash
+        passwordHash,
       ]
     );
 
     const user = result.rows[0];
 
-    // Clear from temporary memory map
+    // Clear pending signup.
     pendingSignups.delete(cleanEmail);
 
+    // Generate JWT.
     const token = createToken(user);
 
-    res.json({
-      message: "Account verified and created successfully",
+    return res.status(201).json({
+      success: true,
+      message: "Account created successfully.",
       token,
-      user
+      user,
     });
 
   } catch (error) {
-    console.error("Error in /verify-otp-signup:", error);
-    res.status(500).json({ message: "Server error during verification" });
+    console.error("Signup verification error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during signup verification.",
+    });
   }
 });
 
 
 /*
-=========================================
-SIGN IN WITH EMAIL OTP
-=========================================
+================================================
+SIGN IN - EMAIL AND PASSWORD ONLY
+POST /api/auth/signin
+NO OTP REQUIRED
+================================================
 */
 
-/*
-STEP 1: SIGN IN - SEND OTP TO REGISTERED EMAIL AFTER PASSWORD CHECK
-*/
-router.post("/signin-send-otp", async (req, res) => {
+router.post("/signin", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
-        message: "Email and password are required."
+        success: false,
+        message: "Email and password are required.",
       });
     }
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if user exists in the database by email
+    // Find registered user.
     const userResult = await pool.query(
-      `SELECT id, name, email, mobile, password_hash, role FROM users WHERE email = $1`,
+      `
+      SELECT
+        id,
+        name,
+        email,
+        mobile,
+        password_hash,
+        role
+      FROM users
+      WHERE email = $1
+      LIMIT 1
+      `,
       [cleanEmail]
     );
 
     if (userResult.rows.length === 0) {
       return res.status(404).json({
-        message: "No account found with this email. Please sign up first."
+        success: false,
+        message: "Account not found. Please sign up first.",
       });
     }
 
     const user = userResult.rows[0];
 
-    // Verify password match before issuing OTP
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    // Verify password.
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
     if (!validPassword) {
-      return res.status(401).json({ message: "Invalid password." });
-    }
-
-    // Generate 6-digit OTP and expiration (5 minutes)
-    const otp = generateOTP();
-    const expiresAt = Date.now() + 5 * 60 * 1000;
-
-    // Save temporary login request state using email as key
-    pendingLogins.set(cleanEmail, {
-      otp,
-      expiresAt,
-      user
-    });
-
-    // Trigger OTP via Resend Email
-    await sendEmailOtp(user.email, otp);
-
-    res.json({
-      success: true,
-      message: `OTP sent successfully to your registered email address`
-    });
-
-  } catch (error) {
-    console.error("Error in /signin-send-otp:", error);
-    res.status(500).json({ message: "Server error while sending sign-in OTP" });
-  }
-});
-
-
-/*
-STEP 2: VERIFY SIGN IN OTP & ISSUE JWT TOKEN
-*/
-router.post("/verify-otp-signin", async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    if (!email || !otp) {
-      return res.status(400).json({
-        message: "Email and OTP are required."
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
       });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const pendingLogin = pendingLogins.get(cleanEmail);
-
-    if (!pendingLogin) {
-      return res.status(400).json({
-        message: "No active sign-in request found. Please request a new OTP."
-      });
-    }
-
-    if (Date.now() > pendingLogin.expiresAt) {
-      pendingLogins.delete(cleanEmail);
-      return res.status(400).json({
-        message: "OTP has expired. Please request a new one."
-      });
-    }
-
-    if (pendingLogin.otp !== otp.trim()) {
-      return res.status(400).json({
-        message: "Invalid OTP code. Please try again."
-      });
-    }
-
-    const user = pendingLogin.user;
-
-    // Clear login entry from memory map
-    pendingLogins.delete(cleanEmail);
-
+    // Generate JWT immediately. No OTP step.
     const token = createToken(user);
 
-    res.json({
-      message: "Sign in successful",
+    return res.status(200).json({
+      success: true,
+      message: "Sign in successful.",
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         mobile: user.mobile,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
 
   } catch (error) {
-    console.error("Error in /verify-otp-signin:", error);
-    res.status(500).json({ message: "Server error during sign-in verification" });
+    console.error("Signin error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during sign in.",
+    });
   }
 });
 
