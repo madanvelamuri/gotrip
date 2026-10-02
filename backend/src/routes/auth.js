@@ -1,4 +1,3 @@
-
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -8,7 +7,6 @@ import { Resend } from "resend";
 const router = express.Router();
 
 // Store pending signup verifications temporarily.
-// These are cleared when the OTP expires or signup succeeds.
 const pendingSignups = new Map();
 
 // Initialize Resend only when an API key is configured.
@@ -43,7 +41,6 @@ function createToken(user) {
 
 // Send signup OTP through Resend.
 async function sendEmailOtp(toEmail, otpCode) {
-  // Development-only fallback.
   if (!resend) {
     if (process.env.NODE_ENV === "production") {
       throw new Error("RESEND_API_KEY is not configured.");
@@ -79,7 +76,6 @@ SIGN UP - STEP 1: SEND EMAIL OTP
 POST /api/auth/signup-send-otp
 ================================================
 */
-
 router.post("/signup-send-otp", async (req, res) => {
   try {
     const { name, email, mobile, password } = req.body;
@@ -109,7 +105,6 @@ router.post("/signup-send-otp", async (req, res) => {
       });
     }
 
-    // Check whether email or mobile already exists.
     const existingQuery = cleanMobile
       ? `SELECT id FROM users WHERE email = $1 OR mobile = $2 LIMIT 1`
       : `SELECT id FROM users WHERE email = $1 LIMIT 1`;
@@ -118,10 +113,7 @@ router.post("/signup-send-otp", async (req, res) => {
       ? [cleanEmail, cleanMobile]
       : [cleanEmail];
 
-    const existing = await pool.query(
-      existingQuery,
-      existingParams
-    );
+    const existing = await pool.query(existingQuery, existingParams);
 
     if (existing.rows.length > 0) {
       return res.status(409).json({
@@ -133,7 +125,6 @@ router.post("/signup-send-otp", async (req, res) => {
     const otp = generateOTP();
     const expiresAt = Date.now() + 5 * 60 * 1000;
 
-    // Store pending signup information.
     pendingSignups.set(cleanEmail, {
       otp,
       expiresAt,
@@ -143,7 +134,6 @@ router.post("/signup-send-otp", async (req, res) => {
       password,
     });
 
-    // Send OTP.
     try {
       await sendEmailOtp(cleanEmail, otp);
     } catch (emailError) {
@@ -177,7 +167,6 @@ SIGN UP - STEP 2: VERIFY OTP AND CREATE ACCOUNT
 POST /api/auth/verify-otp-signup
 ================================================
 */
-
 router.post("/verify-otp-signup", async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -217,13 +206,8 @@ router.post("/verify-otp-signup", async (req, res) => {
       });
     }
 
-    // Hash password before storing it.
-    const passwordHash = await bcrypt.hash(
-      pendingUser.password,
-      12
-    );
+    const passwordHash = await bcrypt.hash(pendingUser.password, 12);
 
-    // Create user in PostgreSQL.
     const result = await pool.query(
       `
       INSERT INTO users (
@@ -244,11 +228,7 @@ router.post("/verify-otp-signup", async (req, res) => {
     );
 
     const user = result.rows[0];
-
-    // Clear pending signup.
     pendingSignups.delete(cleanEmail);
-
-    // Generate JWT.
     const token = createToken(user);
 
     return res.status(201).json({
@@ -271,52 +251,41 @@ router.post("/verify-otp-signup", async (req, res) => {
 
 /*
 ================================================
-SIGN IN - EMAIL AND PASSWORD ONLY
+SIGN IN - DIRECT SIGN-IN (EMAIL OR MOBILE)
 POST /api/auth/signin
-NO OTP REQUIRED
 ================================================
 */
-
 router.post("/signin", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { login, password } = req.body;
 
-    if (!email || !password) {
+    if (!login || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required.",
+        message: "Email/mobile and password are required.",
       });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const identifier = login.trim();
+    const isEmail = identifier.includes("@");
 
-    // Find registered user.
-    const userResult = await pool.query(
-      `
-      SELECT
-        id,
-        name,
-        email,
-        mobile,
-        password_hash,
-        role
-      FROM users
-      WHERE email = $1
-      LIMIT 1
-      `,
-      [cleanEmail]
-    );
+    const query = isEmail
+      ? `SELECT id, name, email, mobile, password_hash, role
+         FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`
+      : `SELECT id, name, email, mobile, password_hash, role
+         FROM users WHERE mobile = $1 LIMIT 1`;
 
-    if (userResult.rows.length === 0) {
+    const result = await pool.query(query, [identifier]);
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Account not found. Please sign up first.",
       });
     }
 
-    const user = userResult.rows[0];
+    const user = result.rows[0];
 
-    // Verify password.
     const validPassword = await bcrypt.compare(
       password,
       user.password_hash
@@ -325,11 +294,10 @@ router.post("/signin", async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password.",
+        message: "Invalid password.",
       });
     }
 
-    // Generate JWT immediately. No OTP step.
     const token = createToken(user);
 
     return res.status(200).json({
@@ -344,13 +312,12 @@ router.post("/signin", async (req, res) => {
         role: user.role,
       },
     });
-
   } catch (error) {
-    console.error("Signin error:", error);
+    console.error("Sign-in error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Server error during sign in.",
+      message: "Server error during sign-in.",
     });
   }
 });
