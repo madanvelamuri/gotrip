@@ -23,7 +23,6 @@ if (typeof document !== "undefined") {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   const [tripType, setTripType] = useState("outstation");
@@ -174,7 +173,6 @@ export default function Dashboard() {
     setShowTermsModal(true);
   }
 
-  // CONFIRM BOOKING AFTER PAYMENT PROOF SUBMISSION
   async function confirmBooking() {
     if (!pendingVehicle) return;
 
@@ -275,6 +273,7 @@ export default function Dashboard() {
 
   const today = new Date().toISOString().split("T")[0];
   const advanceAmount = tripType === "outstation" ? 200 : 150;
+  const upiQrString = `upi://pay?pa=8465826241-3@ybl&pn=GoTrip&am=${advanceAmount}&cu=INR`;
 
   return (
     <div style={styles.dashboardPage}>
@@ -429,7 +428,7 @@ export default function Dashboard() {
       </main>
 
       {/* =========================================
-          TERMS & UPI PAYMENT GATEWAY MODAL
+          TERMS & UPI PAYMENT GATEWAY MODAL (WITH QR CODE)
       ========================================= */}
       {showTermsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTermsModal(false)}>
@@ -437,7 +436,7 @@ export default function Dashboard() {
             <div style={styles.modalHeader}>
               <div>
                 <span style={styles.modalEyebrow}>SECURE CHECKOUT & ADVANCE PAYMENT</span>
-                <h2 style={styles.modalTitle}>💳 UPI Advance Deposit</h2>
+                <h2 style={styles.modalTitle}>💳 Scan QR or Pay via UPI</h2>
               </div>
               <button type="button" style={styles.closeModalButton} onClick={() => setShowTermsModal(false)}>✕</button>
             </div>
@@ -447,48 +446,25 @@ export default function Dashboard() {
                 <span style={{ fontSize: "12px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase" }}>
                   {tripType === "outstation" ? "Outstation Advance" : "Local Rental Advance"}
                 </span>
-                <div style={{ fontSize: "32px", fontWeight: "800", color: "#1e40af", margin: "4px 0" }}>₹{advanceAmount}</div>
-                <div style={{ marginTop: "6px", fontSize: "13px", fontWeight: "700", color: "#334155" }}>
-                  Company UPI ID: <span style={{ color: "#2563eb" }}>8465826241-3@ybl</span>
+                <div style={{ fontSize: "28px", fontWeight: "800", color: "#1e40af", margin: "4px 0" }}>₹{advanceAmount}</div>
+                <div style={{ marginTop: "4px", fontSize: "12px", fontWeight: "700", color: "#334155" }}>
+                  UPI ID: <span style={{ color: "#2563eb" }}>8465826241-3@ybl</span>
                 </div>
-              </div>
 
-              {/* UPI App selector */}
-              <div>
-                <label style={{ ...styles.fieldLabel, marginBottom: "8px" }}>Select UPI App to Pay</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  {[
-                    { id: "gpay", name: "Google Pay" },
-                    { id: "phonepe", name: "PhonePe" },
-                    { id: "paytm", name: "Paytm UPI" },
-                    { id: "bhim", name: "BHIM UPI" }
-                  ].map((upi) => (
-                    <div
-                      key={upi.id}
-                      onClick={() => {
-                        setSelectedUpi(upi.id);
-                        window.open(`upi://pay?pa=8465826241-3@ybl&pn=GoTrip&am=${advanceAmount}&cu=INR`, "_blank");
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: "10px",
-                        border: selectedUpi === upi.id ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                        backgroundColor: selectedUpi === upi.id ? "#eff6ff" : "#f8fafc",
-                        cursor: "pointer",
-                        fontWeight: "700",
-                        fontSize: "13px",
-                        textAlign: "center"
-                      }}
-                    >
-                      Open {upi.name}
-                    </div>
-                  ))}
+                {/* DYNAMIC QR CODE DISPLAY */}
+                <div style={{ backgroundColor: "#ffffff", padding: "10px", borderRadius: "12px", display: "inline-block", marginTop: "10px", boxShadow: "0 4px 10px rgba(0,0,0,0.08)" }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiQrString)}`}
+                    alt="Company UPI QR Code"
+                    style={{ width: "140px", height: "140px", display: "block" }}
+                  />
                 </div>
+                <p style={{ fontSize: "11px", color: "#64748b", margin: "6px 0 0 0" }}>Scan using GPay, PhonePe, Paytm, or BHIM</p>
               </div>
 
               {/* UTR / Transaction Reference Input */}
               <div style={styles.inputGroupWrapper}>
-                <label style={styles.fieldLabel}>Enter UPI Transaction Reference ID / UTR</label>
+                <label style={styles.fieldLabel}>Enter UPI Transaction Reference ID / UTR Number</label>
                 <input
                   type="text"
                   placeholder="e.g. 435678912345"
@@ -511,7 +487,7 @@ export default function Dashboard() {
             <div style={styles.modalFooter}>
               <button type="button" style={{ ...styles.modalActionBtn, backgroundColor: "#64748b", marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
               <button type="button" style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }} onClick={confirmBooking}>
-                Submit Proof & Confirm Booking 🚀
+                Verify Payment & Confirm Booking 🚀
               </button>
             </div>
           </div>

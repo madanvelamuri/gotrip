@@ -13,8 +13,6 @@ router.post("/verify", async (req, res) => {
   try {
     const { userId, from, to, distanceKm, vehicleType, travelDate, amount, transactionRef } = req.body;
 
-    console.log("Received payment verification payload:", req.body);
-
     if (!userId || !from || !distanceKm || !vehicleType || !travelDate || !amount || !transactionRef) {
       return res.status(400).json({
         success: false,
@@ -22,11 +20,15 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    // 1. Create the booking record
+    // Generate unique booking reference to satisfy NOT NULL constraint
+    const bookingRef = `GT-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // 1. Create the booking record with booking_reference
     const bookingResult = await pool.query(
       `
       INSERT INTO bookings (
         user_id,
+        booking_reference,
         from_location,
         to_location,
         distance_km,
@@ -36,11 +38,12 @@ router.post("/verify", async (req, res) => {
         rate_per_km,
         status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
       RETURNING id, booking_reference
       `,
       [
         userId,
+        bookingRef,
         from,
         to || "Local City Rental",
         distanceKm,
@@ -89,9 +92,7 @@ router.post("/verify", async (req, res) => {
     });
 
   } catch (error) {
-    // This will print the exact database or runtime error in your server logs
     console.error("DETAILED PAYMENT VERIFICATION ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: error.message || "Server error while processing payment verification.",
