@@ -628,7 +628,7 @@ export default function Admin() {
                     <th style={styles.th}>Booking Reference</th>
                     <th style={styles.th}>Customer</th>
                     <th style={styles.th}>Route & Addresses</th>
-                    <th style={styles.th}>Pickup Date & Time</th>
+                    <th style={styles.th}>Booking Time</th>
                     <th style={styles.th}>Vehicle</th>
                     <th style={styles.th}>Distance</th>
                     <th style={styles.th}>Fare</th>
@@ -715,7 +715,7 @@ export default function Admin() {
                             style={styles.viewButton}
                             onClick={() => setSelectedBooking(booking)}
                           >
-                            Verify Payment
+                            Verify Details
                           </button>
                         </td>
                       </tr>
@@ -1288,9 +1288,13 @@ export default function Admin() {
                     <small style={styles.modalSubLabel}>PICKUP LOCATION</small>
                     <strong style={styles.modalRouteVal}>{selectedBooking.from_location}</strong>
                   </div>
-                  <div>
+                  <div style={{ marginBottom: "8px" }}>
                     <small style={styles.modalSubLabel}>DESTINATION LOCATION</small>
                     <strong style={styles.modalRouteVal}>{selectedBooking.to_location}</strong>
+                  </div>
+                  <div>
+                    <small style={styles.modalSubLabel}>BOOKING TIME & DATE</small>
+                    <strong style={{ color: "#2563eb", fontSize: "14px" }}>{formatDateTime(selectedBooking.travel_date)}</strong>
                   </div>
                 </div>
               </div>
@@ -1298,7 +1302,7 @@ export default function Admin() {
               {/* PAYMENT VERIFICATION PROOF BOX */}
               <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", padding: "16px", borderRadius: "12px" }}>
                 <span style={{ fontSize: "11px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
-                  💳 Advance UPI Payment Verification
+                  💳 Advance UPI Payment Verification Proof
                 </span>
                 {loadingProof ? (
                   <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Loading payment proof...</p>
@@ -1306,7 +1310,7 @@ export default function Admin() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#1e293b" }}>
                     <div><strong>Amount Paid:</strong> ₹{paymentProof.amount}</div>
                     <div><strong>Target UPI ID:</strong> {paymentProof.upi_id || "8465826241-3@ybl"}</div>
-                    <div><strong>Transaction UTR / Ref:</strong> <span style={{ backgroundColor: "#dbeafe", padding: "2px 6px", borderRadius: "4px", fontWeight: "700", color: "#1e40af" }}>{paymentProof.transaction_ref}</span></div>
+                    <div><strong>Transaction UTR / ID:</strong> <span style={{ backgroundColor: "#dbeafe", padding: "2px 6px", borderRadius: "4px", fontWeight: "700", color: "#1e40af" }}>{paymentProof.transaction_ref}</span></div>
                     <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "700", color: paymentProof.status === "verified" ? "#16a34a" : "#ca8a04" }}>{paymentProof.status}</span></div>
                   </div>
                 ) : (
@@ -1342,20 +1346,12 @@ export default function Admin() {
                   <strong>{selectedBooking.mobile || "-"}</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
-                  <span>Pickup Date & Time</span>
-                  <strong>{formatDateTime(selectedBooking.travel_date)}</strong>
-                </div>
-                <div style={styles.modalInfoItem}>
                   <span>Vehicle Category</span>
                   <strong>{selectedBooking.vehicle_type}</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
                   <span>Total Distance</span>
                   <strong>{Number(selectedBooking.distance_km || 0).toFixed(0)} KM</strong>
-                </div>
-                <div style={styles.modalInfoItem}>
-                  <span>Database ID</span>
-                  <strong>#{selectedBooking.id}</strong>
                 </div>
               </div>
             </div>
