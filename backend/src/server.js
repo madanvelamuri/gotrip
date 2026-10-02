@@ -9,7 +9,8 @@ import bookingRoutes from "./routes/bookings.js";
 import adminRoutes from "./routes/admin.js";
 import locationRoutes from "./routes/locations.js";
 import supportRoutes from "./routes/support.js";
-
+import paymentRoutes from "./routes/payments.js";
+app.use("/api/payments", paymentRoutes);
 dotenv.config();
 
 const app = express();
