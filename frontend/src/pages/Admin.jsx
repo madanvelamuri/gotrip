@@ -35,6 +35,9 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [paymentProof, setPaymentProof] = useState(null);
+  const [loadingProof, setLoadingProof] = useState(false);
+
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [resolutionText, setResolutionText] = useState("");
 
@@ -136,6 +139,27 @@ export default function Admin() {
     loadPricing();
     loadSupportData();
   }, []);
+
+  // Fetch payment verification proof when a booking is selected for inspection
+  useEffect(() => {
+    async function fetchPaymentProof() {
+      if (!selectedBooking?.id) {
+        setPaymentProof(null);
+        return;
+      }
+      try {
+        setLoadingProof(true);
+        const res = await API.get(`/admin/bookings/${selectedBooking.id}/payment`);
+        setPaymentProof(res.data || null);
+      } catch (err) {
+        console.error("No payment verification record found or error fetching proof", err);
+        setPaymentProof(null);
+      } finally {
+        setLoadingProof(false);
+      }
+    }
+    fetchPaymentProof();
+  }, [selectedBooking?.id]);
 
   // -----------------------------------
   // STATISTICS
@@ -304,11 +328,13 @@ export default function Admin() {
 
     try {
       setTimeout(() => {
-        let botReply = "As an admin, you can manage bookings, adjust pricing tiers, and resolve customer support tickets using the top navigation bar.";
+        let botReply = "As an admin, you can manage bookings, verify advance payments, adjust pricing tiers, and resolve customer support tickets.";
         const lower = userMsg.toLowerCase();
 
         if (lower.includes("booking") || lower.includes("status")) {
           botReply = "You can update any reservation's status directly from the bookings table or by clicking the Booking Reference ID.";
+        } else if (lower.includes("payment") || lower.includes("utr")) {
+          botReply = "Click on any booking reference to inspect the customer's UPI payment proof and UTR reference number.";
         } else if (lower.includes("ticket") || lower.includes("support")) {
           botReply = "Click on 'Support Tickets' in the header to view open customer tickets and write resolution responses.";
         } else if (lower.includes("price") || lower.includes("rate")) {
@@ -451,9 +477,9 @@ export default function Admin() {
         <div style={styles.titleRow}>
           <div>
             <span style={styles.eyebrow}>ADMINISTRATION PANEL</span>
-            <h1 style={styles.h1}>Booking & Fleet Management</h1>
+            <h1 style={styles.h1}>Booking & Payment Verification</h1>
             <p style={styles.subtitle}>
-              Monitor customer reservations, manage trip lifecycles, and check system activities.
+              Monitor customer reservations, verify advance UPI payment proofs, and manage fleet operations.
             </p>
           </div>
 
@@ -497,7 +523,7 @@ export default function Admin() {
           <div style={{ ...styles.statCard, borderLeft: "4px solid #ca8a04" }}>
             <div style={{ ...styles.statIconBox, backgroundColor: "#fef9c3", color: "#ca8a04" }}>⏳</div>
             <div>
-              <span style={styles.statLabel}>Pending</span>
+              <span style={styles.statLabel}>Pending Review</span>
               <strong style={styles.statValue}>{pendingBookings}</strong>
             </div>
           </div>
@@ -517,7 +543,7 @@ export default function Admin() {
         <section style={styles.adminSection}>
           <div style={styles.sectionHeader}>
             <div>
-              <h2 style={styles.h2}>All Bookings</h2>
+              <h2 style={styles.h2}>All Bookings & Payment Proofs</h2>
               <p style={styles.sectionSubtext}>
                 Showing {paginatedBookings.length} of {filteredBookings.length} booking{filteredBookings.length !== 1 ? "s" : ""}
               </p>
@@ -619,7 +645,7 @@ export default function Admin() {
                           <div 
                             style={styles.clickableRefText}
                             onClick={() => setSelectedBooking(booking)}
-                            title="Click to view full details"
+                            title="Click to view full details & payment proof"
                           >
                             {booking.booking_reference}
                           </div>
@@ -689,7 +715,7 @@ export default function Admin() {
                             style={styles.viewButton}
                             onClick={() => setSelectedBooking(booking)}
                           >
-                            View Details
+                            Verify Payment
                           </button>
                         </td>
                       </tr>
@@ -1236,14 +1262,14 @@ export default function Admin() {
       )}
 
       {/* =========================================
-          BOOKING DETAILS INSPECTION MODAL
+          BOOKING & PAYMENT VERIFICATION INSPECTION MODAL
       ========================================= */}
       {selectedBooking && (
         <div style={styles.modalOverlay} onClick={() => setSelectedBooking(null)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...styles.modalCard, maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>BOOKING INSPECTION</span>
+                <span style={styles.modalEyebrow}>PAYMENT & BOOKING VERIFICATION</span>
                 <h3 style={styles.modalTitle}>{selectedBooking.booking_reference}</h3>
               </div>
               <button
@@ -1269,6 +1295,25 @@ export default function Admin() {
                 </div>
               </div>
 
+              {/* PAYMENT VERIFICATION PROOF BOX */}
+              <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", padding: "16px", borderRadius: "12px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
+                  💳 Advance UPI Payment Verification
+                </span>
+                {loadingProof ? (
+                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Loading payment proof...</p>
+                ) : paymentProof ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#1e293b" }}>
+                    <div><strong>Amount Paid:</strong> ₹{paymentProof.amount}</div>
+                    <div><strong>Target UPI ID:</strong> {paymentProof.upi_id || "8465826241-3@ybl"}</div>
+                    <div><strong>Transaction UTR / Ref:</strong> <span style={{ backgroundColor: "#dbeafe", padding: "2px 6px", borderRadius: "4px", fontWeight: "700", color: "#1e40af" }}>{paymentProof.transaction_ref}</span></div>
+                    <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "700", color: paymentProof.status === "verified" ? "#16a34a" : "#ca8a04" }}>{paymentProof.status}</span></div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "13px", color: "#dc2626", margin: 0 }}>No payment verification record linked yet.</p>
+                )}
+              </div>
+
               <div style={{ backgroundColor: "#f8fafc", padding: "12px 16px", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>Booking Status:</span>
                 <select
@@ -1281,9 +1326,9 @@ export default function Admin() {
                   }}
                   style={styles.inlineStatusSelect}
                 >
-                  <option value="pending">⏳ Pending</option>
-                  <option value="confirmed">✓ Confirmed</option>
-                  <option value="cancelled">✕ Cancelled</option>
+                  <option value="pending">⏳ Pending Review</option>
+                  <option value="confirmed">✓ Confirmed & Verified</option>
+                  <option value="cancelled">✕ Cancelled (Full Refund if Co.)</option>
                 </select>
               </div>
 
@@ -1309,14 +1354,9 @@ export default function Admin() {
                   <strong>{Number(selectedBooking.distance_km || 0).toFixed(0)} KM</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
-                  <span>Applied Rate</span>
-                  <strong>{formatMoney(selectedBooking.rate_per_km)} / KM</strong>
+                  <span>Database ID</span>
+                  <strong>#{selectedBooking.id}</strong>
                 </div>
-              </div>
-
-              <div style={styles.modalTotalRow}>
-                <span>Calculated Total Fare</span>
-                <strong style={styles.modalTotalFareVal}>{formatMoney(selectedBooking.total_fare)}</strong>
               </div>
             </div>
 
