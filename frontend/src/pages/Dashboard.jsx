@@ -579,7 +579,7 @@ export default function Dashboard() {
           
           <div style={styles.heroHeadingWrapper}>
             <span style={styles.eyebrow}>
-              PREMIUM CABS & RENTALS
+              ✨ PREMIUM CABS & RENTALS
             </span>
             <h1 style={styles.h1}>
               Where are you travelling?
@@ -671,7 +671,7 @@ export default function Dashboard() {
                   type="submit"
                   style={styles.primaryButton}
                 >
-                  {tripType === "outstation" ? "Search Outstation Cabs" : "Check Local Rates"}
+                  {tripType === "outstation" ? "🔍 Search Outstation Cabs" : "⚡ Check Local Rates"}
                 </button>
               </form>
 
@@ -742,7 +742,7 @@ export default function Dashboard() {
                 )}
               </div>
               <span style={styles.distanceBadge}>
-                {tripType === "outstation" ? `Calculated Distance: ${distance} KM` : `Package Base Limit: ${distance} KM`}
+                {tripType === "outstation" ? `📍 Calculated Distance: ${distance} KM` : `📦 Package Base Limit: ${distance} KM`}
               </span>
             </div>
 
@@ -794,7 +794,7 @@ export default function Dashboard() {
                         <div style={styles.vehicleIcon}>
                           🚕
                         </div>
-                        <span style={styles.categoryBadge}>Verified Fleet</span>
+                        <span style={styles.categoryBadge}>⭐ Verified Fleet</span>
                       </div>
 
                       <h3 style={styles.vehicleTitle}>
@@ -837,7 +837,7 @@ export default function Dashboard() {
                         {bookingVehicle ===
                         vehicle.id
                           ? "Securing Booking..."
-                          : "Book Now"}
+                          : "🚀 Book Now"}
                       </button>
 
                     </div>
@@ -1266,7 +1266,7 @@ export default function Dashboard() {
 }
 
 
-// Professional styling layout rules
+// Professional styling layout rules with modern gradients and fun UI enhancements
 const styles = {
   dashboardPage: {
     minHeight: "100vh",
@@ -1275,7 +1275,8 @@ const styles = {
     color: "#1e293b",
   },
   dashboardNav: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backdropFilter: "blur(10px)",
     borderBottom: "1px solid #e2e8f0",
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.02)",
     position: "sticky",
@@ -1289,9 +1290,11 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "14px 24px",
+    flexWrap: "wrap",
+    gap: "12px",
   },
   navLogo: {
-    fontSize: "24px",
+    fontSize: "26px",
     fontWeight: "800",
     color: "#0f172a",
     letterSpacing: "-0.5px",
@@ -1310,7 +1313,7 @@ const styles = {
     alignItems: "center",
     gap: "8px",
     backgroundColor: "#f1f5f9",
-    padding: "6px 12px",
+    padding: "6px 14px",
     borderRadius: "20px",
     border: "1px solid #e2e8f0",
   },
@@ -1319,7 +1322,7 @@ const styles = {
   },
   welcomeText: {
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#334155",
   },
   navButton: {
@@ -1327,7 +1330,7 @@ const styles = {
     color: "#334155",
     border: "1px solid #cbd5e1",
     padding: "8px 14px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
@@ -1338,9 +1341,9 @@ const styles = {
     color: "#b45309",
     border: "1px solid #fde68a",
     padding: "8px 14px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   logoutButton: {
@@ -1348,9 +1351,9 @@ const styles = {
     color: "#dc2626",
     border: "1px solid #fee2e2",
     padding: "8px 14px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   notificationBadge: {
@@ -1462,10 +1465,10 @@ const styles = {
     boxSizing: "border-box",
   },
   heroSection: {
-    backgroundImage: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%)",
-    padding: "50px 20px 80px 20px",
+    backgroundImage: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)",
+    padding: "60px 20px 90px 20px",
     color: "#ffffff",
-    boxShadow: "inset 0 -10px 25px rgba(0,0,0,0.05)",
+    boxShadow: "inset 0 -15px 30px rgba(0,0,0,0.1)",
   },
   heroContentContainer: {
     maxWidth: "750px",
@@ -1473,27 +1476,27 @@ const styles = {
   },
   heroHeadingWrapper: {
     textAlign: "center",
-    marginBottom: "30px",
+    marginBottom: "36px",
   },
   eyebrow: {
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: "800",
-    color: "#93c5fd",
-    letterSpacing: "1.5px",
-    marginBottom: "8px",
+    color: "#60a5fa",
+    letterSpacing: "2px",
+    marginBottom: "10px",
     display: "block",
     textTransform: "uppercase",
   },
   h1: {
-    fontSize: "34px",
+    fontSize: "38px",
     fontWeight: "800",
     color: "#ffffff",
-    marginBottom: "10px",
-    letterSpacing: "-0.5px",
+    marginBottom: "12px",
+    letterSpacing: "-1px",
   },
   heroSubtitle: {
-    fontSize: "15px",
-    color: "#bfdbfe",
+    fontSize: "16px",
+    color: "#cbd5e1",
     margin: "0",
   },
   singleCenterBoxContainer: {
@@ -1501,26 +1504,27 @@ const styles = {
   },
   bookingBox: {
     backgroundColor: "#ffffff",
-    padding: "36px",
-    borderRadius: "20px",
-    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.15)",
+    padding: "40px",
+    borderRadius: "24px",
+    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)",
     color: "#1e293b",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
   },
   tripTabs: {
     display: "flex",
     gap: "10px",
-    marginBottom: "24px",
+    marginBottom: "28px",
     backgroundColor: "#f1f5f9",
     padding: "6px",
-    borderRadius: "12px",
+    borderRadius: "14px",
   },
   tripTabBtn: {
     flex: 1,
     background: "none",
     border: "none",
-    padding: "10px",
-    borderRadius: "8px",
-    fontSize: "13px",
+    padding: "12px",
+    borderRadius: "10px",
+    fontSize: "14px",
     fontWeight: "700",
     color: "#64748b",
     cursor: "pointer",
@@ -1529,22 +1533,22 @@ const styles = {
   tripTabActive: {
     backgroundColor: "#ffffff",
     color: "#2563eb",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+    boxShadow: "0 4px 15px rgba(37, 99, 235, 0.1)",
   },
   routeForm: {
     display: "flex",
     flexDirection: "column",
-    gap: "18px",
+    gap: "20px",
   },
   inputsGrid: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "18px",
   },
   inputGroupWrapper: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "8px",
     width: "100%",
   },
   fieldLabel: {
@@ -1554,42 +1558,43 @@ const styles = {
   },
   selectPackageDropdown: {
     width: "100%",
-    height: "48px",
-    padding: "0 14px",
+    height: "50px",
+    padding: "0 16px",
     border: "1px solid #cbd5e1",
-    borderRadius: "10px",
+    borderRadius: "12px",
     fontSize: "14px",
     color: "#1e293b",
     outline: "none",
     backgroundColor: "#f8fafc",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   primaryButton: {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     border: "none",
-    padding: "14px 24px",
-    borderRadius: "10px",
-    fontSize: "15px",
-    fontWeight: "700",
+    padding: "16px 24px",
+    borderRadius: "12px",
+    fontSize: "16px",
+    fontWeight: "800",
     cursor: "pointer",
-    boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)",
+    boxShadow: "0 6px 20px rgba(37, 99, 235, 0.4)",
     width: "100%",
-    marginTop: "6px",
+    marginTop: "8px",
+    transition: "transform 0.15s ease, background-color 0.15s ease",
   },
   fullButton: {
-    marginTop: "18px",
+    marginTop: "20px",
     width: "100%",
-    padding: "12px",
-    fontSize: "14px",
+    padding: "14px",
+    fontSize: "15px",
   },
   buttonDisabled: {
     opacity: 0.7,
     cursor: "not-allowed",
   },
   dateSection: {
-    marginTop: "24px",
-    paddingTop: "24px",
+    marginTop: "28px",
+    paddingTop: "28px",
     borderTop: "1px solid #f1f5f9",
   },
   dateLabel: {
@@ -1602,18 +1607,18 @@ const styles = {
   dateInput: {
     width: "100%",
     height: "50px",
-    padding: "0 14px",
+    padding: "0 16px",
     border: "1px solid #cbd5e1",
-    borderRadius: "10px",
+    borderRadius: "12px",
     fontSize: "15px",
     outline: "none",
     backgroundColor: "#f8fafc",
     boxSizing: "border-box",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   dashboardMain: {
     maxWidth: "1150px",
-    margin: "-30px auto 60px auto",
+    margin: "-40px auto 60px auto",
     padding: "0 20px",
     position: "relative",
     zIndex: 2,
@@ -1626,113 +1631,116 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "12px",
+    gap: "16px",
     backgroundColor: "#ffffff",
-    padding: "20px 24px",
-    borderRadius: "14px",
+    padding: "24px 28px",
+    borderRadius: "18px",
     border: "1px solid #e2e8f0",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)",
-    marginBottom: "30px",
+    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)",
+    marginBottom: "36px",
   },
   routePoints: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "12px",
     flexWrap: "wrap",
   },
   routePointLabel: {
     fontSize: "12px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#64748b",
     textTransform: "uppercase",
   },
   routePoint: {
-    fontSize: "15px",
-    fontWeight: "700",
+    fontSize: "16px",
+    fontWeight: "800",
     color: "#0f172a",
   },
   routeArrow: {
     color: "#2563eb",
     fontWeight: "bold",
+    fontSize: "18px",
   },
   distanceBadge: {
     backgroundColor: "#eff6ff",
     color: "#1d4ed8",
     border: "1px solid #bfdbfe",
-    padding: "6px 14px",
+    padding: "8px 16px",
     borderRadius: "20px",
     fontSize: "13px",
     fontWeight: "700",
   },
   resultsHeader: {
-    marginBottom: "20px",
+    marginBottom: "24px",
   },
   h2: {
-    fontSize: "22px",
+    fontSize: "24px",
     fontWeight: "800",
     color: "#0f172a",
     margin: "0 0 4px 0",
+    letterSpacing: "-0.5px",
   },
   resultsSubtext: {
-    fontSize: "13px",
+    fontSize: "14px",
     color: "#64748b",
     margin: "0",
   },
   vehicleGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "24px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "28px",
   },
   vehicleCard: {
     backgroundColor: "#ffffff",
     border: "1px solid #e2e8f0",
-    borderRadius: "16px",
-    padding: "28px",
-    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.04)",
+    borderRadius: "20px",
+    padding: "32px",
+    boxShadow: "0 15px 35px rgba(0, 0, 0, 0.05)",
     display: "flex",
     flexDirection: "column",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   },
   cardHeaderTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "16px",
+    marginBottom: "20px",
   },
   vehicleIcon: {
-    fontSize: "28px",
+    fontSize: "30px",
     backgroundColor: "#eff6ff",
-    width: "52px",
-    height: "52px",
-    borderRadius: "12px",
+    width: "60px",
+    height: "60px",
+    borderRadius: "16px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   categoryBadge: {
     fontSize: "11px",
-    fontWeight: "700",
+    fontWeight: "800",
     backgroundColor: "#f0fdf4",
     color: "#15803d",
     border: "1px solid #bbf7d0",
-    padding: "4px 10px",
-    borderRadius: "12px",
+    padding: "6px 12px",
+    borderRadius: "14px",
     textTransform: "uppercase",
   },
   vehicleTitle: {
-    fontSize: "18px",
+    fontSize: "20px",
     fontWeight: "800",
     color: "#0f172a",
-    marginBottom: "4px",
+    marginBottom: "6px",
   },
   vehicleRate: {
     fontSize: "13px",
     color: "#64748b",
-    marginBottom: "20px",
-    fontWeight: "500",
+    marginBottom: "24px",
+    fontWeight: "600",
   },
   fareContainer: {
     marginTop: "auto",
-    paddingTop: "16px",
+    paddingTop: "20px",
     borderTop: "1px solid #f1f5f9",
     display: "flex",
     justifyContent: "space-between",
@@ -1740,25 +1748,25 @@ const styles = {
   },
   fareLabel: {
     fontSize: "12px",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#64748b",
   },
   fare: {
-    fontSize: "22px",
+    fontSize: "24px",
     fontWeight: "800",
     color: "#2563eb",
   },
   messageBox: {
     backgroundColor: "#ffffff",
-    padding: "50px 20px",
-    borderRadius: "16px",
+    padding: "60px 20px",
+    borderRadius: "20px",
     border: "1px solid #e2e8f0",
     textAlign: "center",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.02)",
+    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.03)",
   },
   messageText: {
     fontSize: "16px",
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#0f172a",
     margin: "0",
   },
@@ -1768,13 +1776,13 @@ const styles = {
     marginTop: "6px",
   },
   loadingSpinner: {
-    width: "36px",
-    height: "36px",
-    border: "3px solid #e2e8f0",
+    width: "40px",
+    height: "40px",
+    border: "4px solid #e2e8f0",
     borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
-    margin: "0 auto 12px auto",
+    margin: "0 auto 16px auto",
   },
   modalOverlay: {
     position: "fixed",
@@ -1782,8 +1790,8 @@ const styles = {
     left: 0,
     width: "100vw",
     height: "100vh",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    backdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1794,15 +1802,15 @@ const styles = {
     backgroundColor: "#ffffff",
     width: "100%",
     maxWidth: "540px",
-    borderRadius: "20px",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    borderRadius: "24px",
+    boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
     overflow: "hidden",
   },
   modalHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px 24px",
+    padding: "24px 28px",
     borderBottom: "1px solid #e2e8f0",
     backgroundColor: "#f8fafc",
   },
@@ -1812,7 +1820,7 @@ const styles = {
     color: "#2563eb",
     letterSpacing: "1px",
     display: "block",
-    marginBottom: "2px",
+    marginBottom: "4px",
   },
   modalTitle: {
     fontSize: "18px",
@@ -1827,12 +1835,12 @@ const styles = {
     fontWeight: "bold",
     color: "#64748b",
     cursor: "pointer",
-    padding: "4px 8px",
-    borderRadius: "6px",
+    padding: "6px 10px",
+    borderRadius: "8px",
   },
   modalBody: {
-    padding: "24px",
-    maxHeight: "60vh",
+    padding: "28px",
+    maxHeight: "65vh",
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
@@ -1840,8 +1848,8 @@ const styles = {
   },
   ruleSection: {
     backgroundColor: "#f8fafc",
-    padding: "16px",
-    borderRadius: "12px",
+    padding: "18px",
+    borderRadius: "14px",
     border: "1px solid #e2e8f0",
   },
   ruleTitle: {
@@ -1862,7 +1870,7 @@ const styles = {
     gap: "6px",
   },
   modalFooter: {
-    padding: "16px 24px",
+    padding: "20px 28px",
     borderTop: "1px solid #e2e8f0",
     backgroundColor: "#f8fafc",
     display: "flex",
@@ -1877,19 +1885,19 @@ const styles = {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     border: "none",
-    padding: "10px 20px",
-    borderRadius: "8px",
+    padding: "12px 24px",
+    borderRadius: "10px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.2)",
+    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
   },
   modalCancelAction: {
     backgroundColor: "#e2e8f0",
     color: "#334155",
     border: "none",
-    padding: "10px 20px",
-    borderRadius: "8px",
+    padding: "12px 20px",
+    borderRadius: "10px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
