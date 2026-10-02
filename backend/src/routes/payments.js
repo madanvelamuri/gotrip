@@ -13,6 +13,8 @@ router.post("/verify", async (req, res) => {
   try {
     const { userId, from, to, distanceKm, vehicleType, travelDate, amount, transactionRef } = req.body;
 
+    console.log("Received payment verification payload:", req.body);
+
     if (!userId || !from || !distanceKm || !vehicleType || !travelDate || !amount || !transactionRef) {
       return res.status(400).json({
         success: false,
@@ -20,7 +22,7 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    // 1. Create the booking record in 'pending' status awaiting admin approval
+    // 1. Create the booking record
     const bookingResult = await pool.query(
       `
       INSERT INTO bookings (
@@ -44,7 +46,7 @@ router.post("/verify", async (req, res) => {
         distanceKm,
         vehicleType,
         travelDate,
-        0, // Fare calculated or updated upon review
+        0,
         0
       ]
     );
@@ -87,10 +89,12 @@ router.post("/verify", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Payment verification error:", error);
+    // This will print the exact database or runtime error in your server logs
+    console.error("DETAILED PAYMENT VERIFICATION ERROR:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Server error while processing payment verification.",
+      message: error.message || "Server error while processing payment verification.",
     });
   }
 });
