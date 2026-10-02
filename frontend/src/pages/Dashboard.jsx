@@ -412,7 +412,7 @@ export default function Dashboard() {
       <header style={styles.dashboardNav}>
         <div style={styles.navContainer}>
           <div style={styles.navBrandArea}>
-            <strong style={styles.navLogo}>
+            <strong style={styles.navLogo} onClick={() => navigate("/")}>
               Go<span style={styles.logoSpan}>Trip</span>
             </strong>
           </div>
@@ -761,8 +761,11 @@ export default function Dashboard() {
             {loadingPricing ? (
 
               <div style={styles.messageBox}>
-                <div style={styles.loadingSpinner}></div>
-                <p style={styles.messageText}>Loading available vehicles...</p>
+                <div style={styles.funnyLoaderContainer}>
+                  <div style={styles.carMovingIcon}>🚗💨</div>
+                  <div style={styles.loadingSpinner}></div>
+                </div>
+                <p style={styles.messageText}>Scanning highway fleets and calculating best rates...</p>
               </div>
 
             ) : pricing.length === 0 ? (
@@ -1292,6 +1295,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "12px 28px",
+    gap: "16px",
   },
   navBrandArea: {
     flexShrink: 0,
@@ -1301,6 +1305,7 @@ const styles = {
     fontWeight: "800",
     color: "#0f172a",
     letterSpacing: "-0.5px",
+    cursor: "pointer",
   },
   logoSpan: {
     color: "#2563eb",
@@ -1309,6 +1314,9 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    paddingBottom: "2px",
   },
   userBadge: {
     display: "flex",
@@ -1319,6 +1327,7 @@ const styles = {
     borderRadius: "20px",
     border: "1px solid #e2e8f0",
     marginRight: "4px",
+    flexShrink: 0,
   },
   userAvatar: {
     fontSize: "13px",
@@ -1340,6 +1349,7 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.15s ease",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   adminButton: {
     backgroundColor: "#fef3c7",
@@ -1351,6 +1361,7 @@ const styles = {
     fontWeight: "700",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   logoutButton: {
     backgroundColor: "#fef2f2",
@@ -1362,6 +1373,7 @@ const styles = {
     fontWeight: "700",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   notificationBadge: {
     marginLeft: "5px",
@@ -1769,6 +1781,19 @@ const styles = {
     textAlign: "center",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.03)",
   },
+  funnyLoaderContainer: {
+    position: "relative",
+    height: "50px",
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  carMovingIcon: {
+    fontSize: "24px",
+    position: "absolute",
+    animation: "bounceCar 1s infinite alternate ease-in-out",
+  },
   messageText: {
     fontSize: "16px",
     fontWeight: "800",
@@ -1781,13 +1806,12 @@ const styles = {
     marginTop: "6px",
   },
   loadingSpinner: {
-    width: "40px",
-    height: "40px",
+    width: "50px",
+    height: "50px",
     border: "4px solid #e2e8f0",
     borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
-    margin: "0 auto 16px auto",
   },
   modalOverlay: {
     position: "fixed",
