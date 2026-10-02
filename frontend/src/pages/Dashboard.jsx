@@ -20,26 +20,9 @@ if (typeof document !== "undefined") {
   document.head.appendChild(styleEl);
 }
 
-function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "null");
-  } catch (error) {
-    console.error("Invalid stored user data:", error);
-    return null;
-  }
-}
-
-function getLocalDateString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
-  const user = getStoredUser();
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
   const [tripType, setTripType] = useState("outstation");
   const [from, setFrom] = useState("");
@@ -168,50 +151,39 @@ export default function Dashboard() {
 
   async function confirmBooking() {
     if (!pendingVehicle) return;
-    if (!user?.id) {
-      alert("Your session is not valid. Please sign in again.");
-      navigate("/signin");
-      return;
-    }
-    if (!transactionRef.trim()) {
-      alert("Please enter the UPI Transaction Reference ID / UTR number.");
-      return;
-    }
-    if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) {
-      alert("Please search your route or select a valid rental package first.");
-      return;
-    }
+    if (!transactionRef.trim()) { alert("Please enter the UPI Transaction Reference ID / UTR number."); return; }
 
     try {
+      setShowTermsModal(false);
       setBookingVehicle(pendingVehicle.id);
 
-      const tripLabel = tripType === "local"
-        ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)`
-        : to.trim();
+      const tripLabel = tripType === "local" ? `Local Rental (${localPackage.replace("_", " Hrs / ")} KM)` : to;
       const scheduledDateTime = `${travelDate} ${tripTime || "10:00"}:00`;
+      const advanceAmt = tripType === "outstation" ? 200 : 150;
 
-      // The backend looks up the active rate and calculates the final fare.
+      const rate = Number(pendingVehicle.rate_per_km || 0);
+      const calculatedTotalFare = distance * rate;
+
       const response = await API.post("/payments/verify", {
         userId: user.id,
-        tripType,
-        from: from.trim(),
+        from,
         to: tripLabel,
-        distanceKm: Number(distance),
+        distanceKm: distance,
         vehicleType: pendingVehicle.vehicle_type,
         travelDate: scheduledDateTime,
-        transactionRef: transactionRef.trim()
+        amount: advanceAmt,
+        transactionRef: transactionRef.trim(),
+        totalFare: calculatedTotalFare,
+        ratePerKm: rate
       });
 
-      setShowTermsModal(false);
-      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully. It is pending admin verification.");
+      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully!");
       setSuccessActionCallback(() => () => navigate("/bookings"));
-      setPendingVehicle(null);
-      setTransactionRef("");
     } catch (error) {
-      // Keep the payment modal open so the customer can correct/retry.
       alert(error.response?.data?.message || "Booking submission failed.");
     } finally {
       setBookingVehicle(null);
+      setPendingVehicle(null);
     }
   }
 
@@ -219,7 +191,7 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       await API.post("/support/ticket", { userId: user?.id, subject: supportSubject, message: supportMessage });
-      setSuccessModalMessage("Support ticket submitted!");
+      setSuccessModalMessage("Support ticket submitted successfully!");
       setShowSupportModal(false);
       setSupportMessage("");
     } catch (error) { alert("Could not submit support request."); }
@@ -253,7 +225,7 @@ export default function Dashboard() {
     navigate("/signin");
   }
 
-  const today = getLocalDateString();
+  const today = new Date().toISOString().split("T")[0];
   const advanceAmount = tripType === "outstation" ? 200 : 150;
   const upiQrString = `upi://pay?pa=8465826241-3@ybl&pn=GoTrip&am=${advanceAmount}&cu=INR`;
 
@@ -439,7 +411,7 @@ export default function Dashboard() {
             </div>
             <div style={styles.modalFooter}>
               <button style={{ ...styles.modalCancelAction, marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
-              <button type="button" disabled={bookingVehicle !== null} style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a", opacity: bookingVehicle !== null ? 0.65 : 1 }} onClick={confirmBooking}>{bookingVehicle !== null ? "Submitting..." : "Submit Payment Proof 🚀"}</button>
+              <button type="button" disabled={bookingVehicle !== null} style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a", opacity: bookingVehicle !== null ? 0.65 : 1 }} onClick={confirmBooking}>{bookingVehicle !== null ? "Submitting..." : "Verify Payment & Confirm Booking 🚀"}</button>
             </div>
           </div>
         </div>
@@ -621,7 +593,7 @@ export default function Dashboard() {
                 <span style={styles.modalEyebrow}>USER EXPERIENCE</span>
                 <h2 style={styles.modalTitle}>Rate Your Experience</h2>
               </div>
-              <button type="button" style={styles.closeModalButton} onClick={() => setShowFeedbackModal(false)}>✕</button>
+              <button style={styles.closeModalButton} onClick={() => setShowFeedbackModal(false)}>✕</button>
             </div>
             <form onSubmit={handleFeedbackSubmit} style={styles.modalBody}>
               <div style={styles.inputGroupWrapper}>
@@ -643,6 +615,17 @@ export default function Dashboard() {
                 <button type="submit" style={styles.modalActionBtn}>Send Feedback</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {successModalMessage && (
+        <div style={styles.modalOverlay} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>
+          <div style={{ ...styles.modalCard, maxWidth: "400px", textAlign: "center", padding: "30px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: "50px", marginBottom: "10px" }}>🎉</div>
+            <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "10px" }}>Success!</h3>
+            <p style={{ fontSize: "14px", color: "#475569", marginBottom: "24px", lineHeight: "1.5" }}>{successModalMessage}</p>
+            <button style={{ ...styles.modalActionBtn, width: "100%", padding: "12px" }} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>Continue</button>
           </div>
         </div>
       )}
