@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [loadingPricing, setLoadingPricing] = useState(true);
   const [bookingVehicle, setBookingVehicle] = useState(null);
 
+  // Modals state hooks
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [pendingVehicle, setPendingVehicle] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -118,26 +119,15 @@ export default function Dashboard() {
 
   async function searchRoute(e) {
     e.preventDefault();
-    if (!from.trim()) {
-      alert("Please enter your pickup location.");
-      return;
-    }
+    if (!from.trim()) { alert("Please enter your pickup location."); return; }
 
     if (tripType === "outstation") {
-      if (!to.trim()) {
-        alert("Please select a destination location.");
-        return;
-      }
+      if (!to.trim()) { alert("Please select a destination location."); return; }
       try {
-        const response = await API.post("/location/calculate-distance", {
-          origin: from.trim(),
-          destination: to.trim()
-        });
+        const response = await API.post("/location/calculate-distance", { origin: from.trim(), destination: to.trim() });
         setDistance(response.data.distanceKm);
         setSearched(true);
-      } catch (error) {
-        alert("Could not calculate exact route distance.");
-      }
+      } catch (error) { alert("Could not calculate exact route distance."); }
     } else {
       let packageKm = 40;
       if (localPackage === "8_80") packageKm = 80;
@@ -150,20 +140,10 @@ export default function Dashboard() {
   }
 
   function handleBookClick(vehicle) {
-    if (!from || (tripType === "outstation" && !to)) {
-      alert("Please complete your location selection.");
-      return;
-    }
-    if (!travelDate) {
-      alert("Please select a travel date.");
-      return;
-    }
+    if (!from || (tripType === "outstation" && !to)) { alert("Please complete your location selection."); return; }
+    if (!travelDate) { alert("Please select a travel date."); return; }
     const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please sign in before booking.");
-      navigate("/signin");
-      return;
-    }
+    if (!token) { alert("Please sign in before booking."); navigate("/signin"); return; }
     setPendingVehicle(vehicle);
     setTransactionRef("");
     setShowTermsModal(true);
@@ -171,11 +151,7 @@ export default function Dashboard() {
 
   async function confirmBooking() {
     if (!pendingVehicle) return;
-
-    if (!transactionRef.trim()) {
-      alert("Please enter the UPI Transaction Reference ID / UTR number after making the payment.");
-      return;
-    }
+    if (!transactionRef.trim()) { alert("Please enter the UPI Transaction Reference ID / UTR number."); return; }
 
     try {
       setShowTermsModal(false);
@@ -185,29 +161,21 @@ export default function Dashboard() {
       const scheduledDateTime = `${travelDate} ${tripTime || "10:00"}:00`;
       const advanceAmt = tripType === "outstation" ? 200 : 150;
 
-      const response = await API.post(
-        "/payments/verify",
-        {
-          userId: user.id,
-          from,
-          to: tripLabel,
-          distanceKm: distance,
-          vehicleType: pendingVehicle.vehicle_type,
-          travelDate: scheduledDateTime,
-          amount: advanceAmt,
-          transactionRef: transactionRef.trim()
-        }
-      );
+      const response = await API.post("/payments/verify", {
+        userId: user.id,
+        from,
+        to: tripLabel,
+        distanceKm: distance,
+        vehicleType: pendingVehicle.vehicle_type,
+        travelDate: scheduledDateTime,
+        amount: advanceAmt,
+        transactionRef: transactionRef.trim()
+      });
 
-      setSuccessModalMessage(
-        response.data?.message ||
-        "Payment proof verified! Booking confirmed and awaiting admin approval."
-      );
+      setSuccessModalMessage(response.data?.message || "Payment proof submitted successfully!");
       setSuccessActionCallback(() => () => navigate("/bookings"));
-
     } catch (error) {
-      console.error("Booking error:", error);
-      alert(error.response?.data?.message || "Booking submission failed. Please try again.");
+      alert(error.response?.data?.message || "Booking submission failed.");
     } finally {
       setBookingVehicle(null);
       setPendingVehicle(null);
@@ -289,7 +257,7 @@ export default function Dashboard() {
           <div style={styles.bookingBox}>
             <div style={styles.tripTabs}>
               <button type="button" style={{ ...styles.tripTabBtn, ...(tripType === "outstation" ? styles.tripTabActive : {}) }} onClick={() => { setTripType("outstation"); setSearched(false); }}>🚗 Outstation Cabs</button>
-              <button type="button" style={{ ...styles.tripTabBtn, ...(tripType === "local" ? styles.tripTabActive : {}) }} onClick={() => { setTripType("local"); setSearched(false); }}>🏙️️ Local City Rentals</button>
+              <button type="button" style={{ ...styles.tripTabBtn, ...(tripType === "local" ? styles.tripTabActive : {}) }} onClick={() => { setTripType("local"); setSearched(false); }}>🏙 Local City Rentals</button>
             </div>
 
             <form style={styles.routeForm} onSubmit={searchRoute}>
@@ -368,77 +336,48 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* =========================================
-          TERMS & UPI PAYMENT GATEWAY MODAL (WITH QR CODE)
-      ========================================= */}
+      {/* MODALS */}
+      {showInstructionsModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowInstructionsModal(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>📋 GoTrip Guidelines</h3><button onClick={() => setShowInstructionsModal(false)}>✕</button></div>
+            <div style={styles.modalBody}><p>Ensure accurate pickup locations and active phone numbers.</p></div>
+            <div style={styles.modalFooter}><button style={styles.modalActionBtn} onClick={() => setShowInstructionsModal(false)}>Got It</button></div>
+          </div>
+        </div>
+      )}
+
       {showTermsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTermsModal(false)}>
           <div style={{ ...styles.modalCard, maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <div>
-                <span style={styles.modalEyebrow}>SECURE CHECKOUT & ADVANCE PAYMENT</span>
-                <h2 style={styles.modalTitle}>💳 Scan QR or Pay via UPI</h2>
-              </div>
-              <button type="button" style={styles.closeModalButton} onClick={() => setShowTermsModal(false)}>✕</button>
+              <h2 style={styles.modalTitle}>💳 UPI Advance Deposit</h2>
+              <button onClick={() => setShowTermsModal(false)}>✕</button>
             </div>
-
             <div style={styles.modalBody}>
-              <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", padding: "16px", borderRadius: "14px", textAlign: "center" }}>
-                <span style={{ fontSize: "12px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase" }}>
-                  {tripType === "outstation" ? "Outstation Advance" : "Local Rental Advance"}
-                </span>
-                <div style={{ fontSize: "28px", fontWeight: "800", color: "#1e40af", margin: "4px 0" }}>₹{advanceAmount}</div>
-                <div style={{ marginTop: "4px", fontSize: "12px", fontWeight: "700", color: "#334155" }}>
-                  UPI ID: <span style={{ color: "#2563eb" }}>8465826241-3@ybl</span>
+              <div style={{ backgroundColor: "#eff6ff", padding: "16px", borderRadius: "14px", textAlign: "center" }}>
+                <div style={{ fontSize: "28px", fontWeight: "800", color: "#1e40af" }}>₹{advanceAmount}</div>
+                <div>UPI ID: <span style={{ color: "#2563eb", fontWeight: "700" }}>8465826241-3@ybl</span></div>
+                <div style={{ backgroundColor: "#ffffff", padding: "10px", borderRadius: "12px", display: "inline-block", marginTop: "10px" }}>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiQrString)}`} alt="QR" style={{ width: "130px", height: "130px" }} />
                 </div>
-
-                <div style={{ backgroundColor: "#ffffff", padding: "10px", borderRadius: "12px", display: "inline-block", marginTop: "10px", boxShadow: "0 4px 10px rgba(0,0,0,0.08)" }}>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiQrString)}`}
-                    alt="Company UPI QR Code"
-                    style={{ width: "140px", height: "140px", display: "block" }}
-                  />
-                </div>
-                <p style={{ fontSize: "11px", color: "#64748b", margin: "6px 0 0 0" }}>Scan using GPay, PhonePe, Paytm, or BHIM</p>
               </div>
-
               <div style={styles.inputGroupWrapper}>
-                <label style={styles.fieldLabel}>Enter UPI Transaction Reference ID / UTR Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 435678912345"
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                  style={styles.dateInput}
-                  required
-                />
-              </div>
-
-              <div style={styles.ruleSection}>
-                <h4 style={{ ...styles.ruleTitle, color: "#1e3a8a" }}>📜 Refund Policy</h4>
-                <ul style={styles.ruleList}>
-                  <li>The advance amount (₹{advanceAmount}) is <strong>non-refundable</strong> if cancelled by customer.</li>
-                  <li>If GoTrip cancels your trip, you will receive a <strong>100% full refund</strong> instantly.</li>
-                </ul>
+                <label style={styles.fieldLabel}>Enter UPI Transaction Reference / UTR Number</label>
+                <input type="text" placeholder="e.g. 435678912345" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} style={styles.dateInput} required />
               </div>
             </div>
-
             <div style={styles.modalFooter}>
-              <button type="button" style={{ ...styles.modalActionBtn, backgroundColor: "#64748b", marginRight: "10px" }} onClick={() => setShowTermsModal(false)}>Cancel</button>
-              <button type="button" style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }} onClick={confirmBooking}>Verify Payment & Confirm Booking 🚀</button>
+              <button style={{ ...styles.modalActionBtn, backgroundColor: "#16a34a" }} onClick={confirmBooking}>Verify & Confirm Booking 🚀</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Alerts Modal */}
       {showNotificationsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowNotificationsModal(false)}>
           <div style={{ ...styles.modalCard, maxWidth: "460px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Status Alerts</h3>
-              <button type="button" style={styles.closeModalButton} onClick={() => setShowNotificationsModal(false)}>✕</button>
-            </div>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>Status Alerts</h3><button onClick={() => setShowNotificationsModal(false)}>✕</button></div>
             <div style={{ padding: "16px 24px", backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
               <div style={styles.alertFilterButtons}>
                 <button type="button" style={{ ...styles.alertTabBtn, ...(notificationFilter === "all" ? styles.alertTabActive : {}) }} onClick={() => setNotificationFilter("all")}>All</button>
@@ -458,14 +397,76 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Success Modal */}
+      {showContactModal && !chatOpen && (
+        <div style={styles.modalOverlay} onClick={() => setShowContactModal(false)}>
+          <div style={{ ...styles.modalCard, maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>Contact Support</h3><button onClick={() => setShowContactModal(false)}>✕</button></div>
+            <div style={styles.modalBody}>
+              <button style={styles.contactOptionCard} onClick={() => setChatOpen(true)}>🤖 <div><strong>Live Chat</strong><span>Chat with bot or escalate to agent</span></div></button>
+              <a href="tel:+919876543210" style={{ ...styles.contactOptionCard, textDecoration: "none" }}>📞 <div><strong>Call Helpline</strong><span>+91 98765 43210</span></div></a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {chatOpen && (
+        <div style={styles.modalOverlay} onClick={() => { setChatOpen(false); setShowContactModal(false); }}>
+          <div style={{ ...styles.modalCard, maxWidth: "480px", height: "500px", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>GoTrip Assistant</h3><button onClick={() => { setChatOpen(false); setShowContactModal(false); }}>✕</button></div>
+            <div style={{ flex: 1, padding: "16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px", backgroundColor: "#f8fafc" }}>
+              {chatMessages.map((msg, i) => (
+                <div key={i} style={{ alignSelf: msg.sender === "user" ? "flex-end" : "flex-start", backgroundColor: msg.sender === "user" ? "#2563eb" : "#fff", color: msg.sender === "user" ? "#fff" : "#000", padding: "10px", borderRadius: "10px", maxWidth: "80%" }}>{msg.text}</div>
+              ))}
+            </div>
+            <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #e2e8f0", display: "flex", gap: "8px" }}>
+              <input type="text" placeholder="Type message or 'agent'..." value={inputMessage} onChange={e => setInputMessage(e.target.value)} style={{ flex: 1, padding: "8px", border: "1px solid #cbd5e1", borderRadius: "8px" }} />
+              <button type="submit" style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "0 14px", borderRadius: "8px", fontWeight: "700" }}>Send</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showSupportModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowSupportModal(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>Customer Support Ticket</h3><button onClick={() => setShowSupportModal(false)}>✕</button></div>
+            <form onSubmit={handleSupportSubmit} style={styles.modalBody}>
+              <select value={supportSubject} onChange={e => setSupportSubject(e.target.value)} style={styles.selectPackageDropdown}>
+                <option value="Booking Modification">Booking Modification</option>
+                <option value="Cancellation & Refund">Cancellation & Refund</option>
+                <option value="Driver Coordination">Driver Coordination</option>
+              </select>
+              <textarea required rows="4" placeholder="Describe your issue..." value={supportMessage} onChange={e => setSupportMessage(e.target.value)} style={{ ...styles.dateInput, height: "100px", padding: "10px" }} />
+              <button type="submit" style={styles.modalActionBtn}>Submit Ticket</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showFeedbackModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowFeedbackModal(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}><h3 style={styles.modalTitle}>Rate Your Experience</h3><button onClick={() => setShowFeedbackModal(false)}>✕</button></div>
+            <form onSubmit={handleFeedbackSubmit} style={styles.modalBody}>
+              <select value={feedbackRating} onChange={e => setFeedbackRating(Number(e.target.value))} style={styles.selectPackageDropdown}>
+                <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                <option value="4">⭐⭐⭐⭐ (4 - Very Good)</option>
+                <option value="3">⭐⭐⭐ (3 - Average)</option>
+              </select>
+              <textarea rows="3" placeholder="Comments..." value={feedbackComments} onChange={e => setFeedbackComments(e.target.value)} style={{ ...styles.dateInput, height: "80px", padding: "10px" }} />
+              <button type="submit" style={styles.modalActionBtn}>Send Feedback</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {successModalMessage && (
         <div style={styles.modalOverlay} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>
-          <div style={{ ...styles.modalCard, maxWidth: "400px", textAlign: "center", padding: "30px 20px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: "50px", marginBottom: "10px" }}>🎉</div>
-            <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "10px" }}>Success!</h3>
-            <p style={{ fontSize: "14px", color: "#475569", marginBottom: "24px" }}>{successModalMessage}</p>
-            <button type="button" style={{ ...styles.modalActionBtn, width: "100%" }} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>Continue</button>
+          <div style={{ ...styles.modalCard, maxWidth: "400px", textAlign: "center", padding: "30px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: "40px" }}>🎉</div>
+            <h3>Success!</h3>
+            <p>{successModalMessage}</p>
+            <button style={{ ...styles.modalActionBtn, width: "100%" }} onClick={() => { const cb = successActionCallback; setSuccessModalMessage(""); if (cb) cb(); }}>Continue</button>
           </div>
         </div>
       )}
@@ -488,13 +489,11 @@ const styles = {
   adminButton: { backgroundColor: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "7px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer" },
   logoutButton: { backgroundColor: "#fef2f2", color: "#dc2626", border: "1px solid #fee2e2", padding: "7px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer" },
   notificationBadge: { marginLeft: "5px", backgroundColor: "#dc2626", color: "#fff", padding: "2px 5px", borderRadius: "50%", fontSize: "9px" },
-  alertHeaderRow: { display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px", borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" },
   alertFilterButtons: { display: "flex", gap: "6px" },
   alertTabBtn: { flex: 1, background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "6px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", color: "#64748b", cursor: "pointer" },
   alertTabActive: { backgroundColor: "#2563eb", color: "#ffffff", borderColor: "#2563eb" },
   notificationItem: { display: "flex", alignItems: "center", justifyContent: "space-between" },
   dotIndicator: { color: "#16a34a", fontSize: "16px", marginLeft: "4px" },
-  alertSnippet: { fontSize: "12px", color: "#475569", margin: "2px 0 0 0" },
   alertViewBtn: { backgroundColor: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer" },
   heroSection: { backgroundImage: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)", padding: "60px 20px 90px 20px", color: "#ffffff" },
   heroContentContainer: { maxWidth: "750px", margin: "0 auto" },
@@ -553,5 +552,6 @@ const styles = {
   ruleTitle: { fontSize: "14px", fontWeight: "800", margin: "0 0 10px 0" },
   ruleList: { margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#334155", lineHeight: "1.6", display: "flex", flexDirection: "column", gap: "6px" },
   modalFooter: { padding: "20px 28px", borderTop: "1px solid #e2e8f0", backgroundColor: "#f8fafc", display: "flex", justifyContent: "flex-end" },
-  modalActionBtn: { backgroundColor: "#2563eb", color: "#ffffff", border: "none", padding: "12px 24px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: "pointer" }
+  modalActionBtn: { backgroundColor: "#2563eb", color: "#ffffff", border: "none", padding: "12px 24px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: "pointer" },
+  contactOptionCard: { display: "flex", alignItems: "center", gap: "14px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", padding: "14px 16px", borderRadius: "14px", cursor: "pointer", width: "100%", boxSizing: "border-box" }
 };

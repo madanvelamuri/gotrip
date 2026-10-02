@@ -303,4 +303,28 @@ router.patch(
   }
 );
 
+router.get("/bookings", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        b.*, 
+        u.name AS customer_name, 
+        u.email, 
+        u.mobile,
+        pv.transaction_ref,
+        pv.upi_id,
+        pv.amount AS advance_amount,
+        pv.status AS payment_status
+      FROM bookings b
+      LEFT JOIN users u ON b.user_id = u.id
+      LEFT JOIN payment_verifications pv ON pv.booking_id = b.id
+      ORDER BY b.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Admin bookings error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router;
