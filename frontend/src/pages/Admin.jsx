@@ -59,7 +59,7 @@ export default function Admin() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { sender: "bot", text: "Hello Administrator, how may I assist you with operations today?" }
+    { sender: "bot", text: "Hello Admin! I am your GoTrip Admin Assistant. How can I assist you with platform management today?" }
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -75,7 +75,7 @@ export default function Admin() {
       const response = await API.get("/admin/bookings");
       setBookings(response.data || []);
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to retrieve bookings records.");
+      setError(err.response?.data?.message || "Unable to load bookings");
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function Admin() {
       const response = await API.get("/pricing");
       setPricing(response.data || []);
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to retrieve pricing configurations.");
+      setError(err.response?.data?.message || "Unable to load pricing");
     } finally {
       setPricingLoading(false);
     }
@@ -99,7 +99,7 @@ export default function Admin() {
       setFeedbackList(response.data?.feedback || []);
       setTicketsList(response.data?.tickets || []);
     } catch (err) {
-      console.error("Support data fetch failure:", err);
+      console.error("Failed to load support data", err);
     }
   };
 
@@ -170,24 +170,24 @@ export default function Admin() {
       setSuccessModalMessage("Booking status updated successfully.");
       await loadBookings();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update booking status.");
+      setError(err.response?.data?.message || "Unable to update booking status");
     }
   };
 
   const updatePrice = async (pricingId) => {
     const price = Number(newPrice);
     if (!price || price <= 0) {
-      setError("Please enter a valid rate amount.");
+      setError("Please enter a valid price.");
       return;
     }
     try {
       await API.patch(`/admin/pricing/${pricingId}`, { ratePerKm: price });
-      setSuccessModalMessage("Pricing tier updated successfully.");
+      setSuccessModalMessage("Pricing updated successfully.");
       setEditingPrice(null);
       setNewPrice("");
       await loadPricing();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update pricing tier.");
+      setError(err.response?.data?.message || "Unable to update pricing");
     }
   };
 
@@ -204,12 +204,12 @@ export default function Admin() {
         status: "resolved"
       });
 
-      setSuccessModalMessage(`Support ticket #TK-${selectedTicket.id} marked as resolved.`);
+      setSuccessModalMessage(`Support ticket #TK-${selectedTicket.id} resolved successfully and notification sent.`);
       setSelectedTicket(null);
       setResolutionText("");
       await loadSupportData();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update support ticket resolution.");
+      setError(err.response?.data?.message || "Unable to submit ticket resolution");
     }
   };
 
@@ -223,12 +223,22 @@ export default function Admin() {
     setChatLoading(true);
 
     setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: "Administrative request processed. You can verify records or modify statuses directly from the respective control panels." }
-      ]);
+      let botReply = "As an admin, you can manage bookings, verify advance payments, adjust pricing tiers, and resolve customer support tickets.";
+      const lower = userMsg.toLowerCase();
+
+      if (lower.includes("booking") || lower.includes("status")) {
+        botReply = "You can update any reservation's status directly from the bookings table or by clicking the Booking Reference ID.";
+      } else if (lower.includes("payment") || lower.includes("utr")) {
+        botReply = "Click on any booking reference to inspect the customer's UPI payment proof and UTR reference number.";
+      } else if (lower.includes("ticket") || lower.includes("support")) {
+        botReply = "Click on 'Support Tickets' in the header to view open customer tickets and write resolution responses.";
+      } else if (lower.includes("price") || lower.includes("rate")) {
+        botReply = "Use 'Pricing Management' to update per-kilometer rates across outstation and local vehicle fleets.";
+      }
+
+      setChatMessages((prev) => [...prev, { sender: "bot", text: botReply }]);
       setChatLoading(false);
-    }, 600);
+    }, 700);
   };
 
   const formatDateTime = (dateStr) => {
@@ -265,14 +275,14 @@ export default function Admin() {
         <div style={styles.navContainer}>
           <strong style={styles.navLogo} onClick={() => navigate("/dashboard")}>
             Go<span style={styles.logoSpan}>Trip</span>
-            <span style={styles.adminBadgeTag}>Management Console</span>
+            <span style={styles.adminBadgeTag}>Admin</span>
           </strong>
           <div style={styles.navRight}>
             <button type="button" style={styles.navButtonPrimary} onClick={() => setShowPricingModal(true)}>
-              ⚙️️ Rate Management
+              ⚙️ Pricing Management
             </button>
             <button type="button" style={styles.navButton} onClick={() => setShowFeedbackModal(true)}>
-              ⭐ Feedback ({feedbackList.length})
+              ⭐ Feedback Reviews ({feedbackList.length})
             </button>
             <button
               type="button"
@@ -282,13 +292,13 @@ export default function Admin() {
                 setShowTicketsModal(true);
               }}
             >
-              🎧 Service Tickets ({ticketsList.filter((t) => t.status === "open" || t.status === "in_progress").length})
+              🎧 Support Tickets ({ticketsList.filter((t) => t.status === "open" || t.status === "in_progress").length})
             </button>
             <button type="button" style={styles.navButton} onClick={() => setShowContactModal(true)}>
-              📞 Helpdesk
+              📞 Contact Us
             </button>
             <button type="button" style={styles.navButton} onClick={() => navigate("/dashboard")}>
-              Client View
+              Back to Dashboard
             </button>
           </div>
         </div>
@@ -297,10 +307,10 @@ export default function Admin() {
       <main style={styles.adminContainer}>
         <div style={styles.titleRow}>
           <div>
-            <span style={styles.eyebrow}>ADMINISTRATIVE CONSOLE</span>
-            <h1 style={styles.h1}>Reservation & Payment Verification</h1>
+            <span style={styles.eyebrow}>ADMINISTRATION PANEL</span>
+            <h1 style={styles.h1}>Booking & Payment Verification</h1>
             <p style={styles.subtitle}>
-              Audit incoming trip reservations, validate transaction references, and manage fleet rate schedules.
+              Monitor customer reservations, verify advance UPI payment proofs, and manage fleet operations.
             </p>
           </div>
           <button
@@ -312,7 +322,7 @@ export default function Admin() {
               loadSupportData();
             }}
           >
-            ↻ Refresh Records
+            ↻ Refresh Data
           </button>
         </div>
 
@@ -337,7 +347,7 @@ export default function Admin() {
           <div style={{ ...styles.statCard, borderLeft: "4px solid #ca8a04" }}>
             <div style={{ ...styles.statIconBox, backgroundColor: "#fef9c3", color: "#ca8a04" }}>⏳</div>
             <div>
-              <span style={styles.statLabel}>Awaiting Verification</span>
+              <span style={styles.statLabel}>Pending</span>
               <strong style={styles.statValue}>{pendingBookings}</strong>
             </div>
           </div>
@@ -356,7 +366,7 @@ export default function Admin() {
               <span style={styles.searchIcon}>⌕</span>
               <input
                 type="text"
-                placeholder="Search by reference, customer, mobile, route, or UTR..."
+                placeholder="Search reference, customer name, mobile, route, or UTR..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={styles.searchInput}
@@ -373,7 +383,7 @@ export default function Admin() {
                   }}
                   onClick={() => setStatusFilter(st)}
                 >
-                  {st === "all" ? "All Bookings" : st.charAt(0).toUpperCase() + st.slice(1)}
+                  {st === "all" ? "All" : st.charAt(0).toUpperCase() + st.slice(1)}
                 </button>
               ))}
             </div>
@@ -386,24 +396,24 @@ export default function Admin() {
                   <div style={styles.carMovingIcon}>🚗💨</div>
                   <div style={styles.loadingSpinner}></div>
                 </div>
-                <p style={styles.messageText}>Retrieving reservation records...</p>
+                <p style={styles.messageText}>Admin dashboard loading travel data...</p>
               </div>
             ) : paginatedBookings.length === 0 ? (
               <div style={styles.messageBox}>
-                <p style={styles.messageText}>No matching reservations found.</p>
+                <p style={styles.messageText}>No bookings found matching your filter criteria.</p>
               </div>
             ) : (
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Reference & ID</th>
+                    <th style={styles.th}>Booking Reference</th>
                     <th style={styles.th}>Customer</th>
-                    <th style={styles.th}>Itinerary</th>
-                    <th style={styles.th}>Scheduled Dates</th>
-                    <th style={styles.th}>Category</th>
-                    <th style={styles.th}>Fare Value</th>
-                    <th style={styles.th}>Reservation Status</th>
-                    <th style={styles.th}>Verification</th>
+                    <th style={styles.th}>Route & Addresses</th>
+                    <th style={styles.th}>Booking / Pickup Time</th>
+                    <th style={styles.th}>Vehicle</th>
+                    <th style={styles.th}>Fare</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,25 +425,25 @@ export default function Admin() {
                           <div style={styles.clickableRefText} onClick={() => setSelectedBooking(booking)}>
                             {booking.booking_reference}
                           </div>
-                          <small style={styles.subId}>System ID: #{booking.id}</small>
+                          <small style={styles.subId}>ID: #{booking.id}</small>
                         </td>
                         <td style={styles.td}>
-                          <div style={styles.boldText}>{booking.customer_name || booking.name || "Guest User"}</div>
+                          <div style={styles.boldText}>{booking.customer_name || booking.name || "Customer"}</div>
                           {booking.mobile && <small style={styles.subId}>{booking.mobile}</small>}
                         </td>
                         <td style={styles.td}>
                           <div style={styles.routeCellContainer}>
                             <div style={isExpanded ? styles.routeExpandedText : styles.routeTruncatedText}>
-                              <span style={styles.routeMarkerFrom}>Origin:</span> {booking.from_location}
+                              <span style={styles.routeMarkerFrom}>From:</span> {booking.from_location}
                               <br />
-                              <span style={styles.routeMarkerTo}>Destination:</span> {booking.to_location}
+                              <span style={styles.routeMarkerTo}>To:</span> {booking.to_location}
                             </div>
                             <button
                               type="button"
                               style={styles.seeMoreToggleBtn}
                               onClick={() => toggleRouteExpand(booking.id)}
                             >
-                              {isExpanded ? "▲ Collapse" : "▼ Expand"}
+                              {isExpanded ? "▲ See Less" : "▼ See More"}
                             </button>
                           </div>
                         </td>
@@ -469,7 +479,7 @@ export default function Admin() {
                             style={styles.viewButton}
                             onClick={() => setSelectedBooking(booking)}
                           >
-                            Review Details
+                            Verify Details
                           </button>
                         </td>
                       </tr>
@@ -520,8 +530,8 @@ export default function Admin() {
           <div style={{ ...styles.modalCard, maxWidth: "750px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>CONFIGURATION</span>
-                <h3 style={styles.modalTitle}>Rate Schedule Management</h3>
+                <span style={styles.modalEyebrow}>FLEET SETUP</span>
+                <h3 style={styles.modalTitle}>Pricing Management</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setShowPricingModal(false)}>
                 ✕
@@ -530,7 +540,7 @@ export default function Admin() {
 
             <div style={{ ...styles.modalBody, maxHeight: "70vh" }}>
               <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0" }}>
-                Adjust standard distance rates across outstation and local vehicle categories.
+                Update outstation and local vehicle rates per kilometre across the fleet.
               </p>
 
               <div style={styles.pricingGrid}>
@@ -540,7 +550,7 @@ export default function Admin() {
                   </div>
                 ) : pricing.length === 0 ? (
                   <div style={styles.messageBox}>
-                    <p style={styles.messageText}>No active rate tiers available.</p>
+                    <p style={styles.messageText}>No pricing records found.</p>
                   </div>
                 ) : (
                   pricing.map((item) => (
@@ -559,7 +569,7 @@ export default function Admin() {
                       </div>
 
                       <h3 style={styles.pricingTitle}>{item.vehicle_type}</h3>
-                      <p style={styles.pricingSubtitle}>Configured Base Rate</p>
+                      <p style={styles.pricingSubtitle}>Active rate setup</p>
 
                       <div style={styles.pricingRateBox}>
                         {editingPrice === item.id ? (
@@ -615,7 +625,7 @@ export default function Admin() {
                             setNewPrice(item.rate_per_km);
                           }}
                         >
-                          Update Rate
+                          Edit Rate
                         </button>
                       )}
                     </div>
@@ -630,7 +640,7 @@ export default function Admin() {
                 style={styles.modalCloseAction}
                 onClick={() => setShowPricingModal(false)}
               >
-                Close
+                Close Window
               </button>
             </div>
           </div>
@@ -643,8 +653,8 @@ export default function Admin() {
           <div style={{ ...styles.modalCard, maxWidth: "700px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>QUALITY AUDIT</span>
-                <h3 style={styles.modalTitle}>Customer Feedback Records</h3>
+                <span style={styles.modalEyebrow}>RATINGS & REVIEWS</span>
+                <h3 style={styles.modalTitle}>Customer Feedback Reviews</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setShowFeedbackModal(false)}>
                 ✕
@@ -654,16 +664,16 @@ export default function Admin() {
             <div style={{ ...styles.modalBody, maxHeight: "65vh" }}>
               {feedbackList.length === 0 ? (
                 <div style={styles.messageBox}>
-                  <p style={styles.messageText}>No customer ratings recorded.</p>
+                  <p style={styles.messageText}>No customer feedback submitted yet.</p>
                 </div>
               ) : (
                 <div style={styles.tableWrapper}>
                   <table style={styles.table}>
                     <thead>
                       <tr style={styles.tableHeaderRow}>
-                        <th style={styles.th}>Score</th>
-                        <th style={styles.th}>Remarks</th>
-                        <th style={styles.th}>Timestamp</th>
+                        <th style={styles.th}>Rating</th>
+                        <th style={styles.th}>Comments</th>
+                        <th style={styles.th}>Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -688,21 +698,21 @@ export default function Admin() {
                 style={styles.modalCloseAction}
                 onClick={() => setShowFeedbackModal(false)}
               >
-                Close
+                Close Window
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL 3: SERVICE DESK TICKETS */}
+      {/* MODAL 3: SUPPORT TICKETS POP-UP */}
       {showTicketsModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTicketsModal(false)}>
           <div style={{ ...styles.modalCard, maxWidth: "850px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>INCIDENT MANAGEMENT</span>
-                <h3 style={styles.modalTitle}>Customer Service Tickets</h3>
+                <span style={styles.modalEyebrow}>CUSTOMER ASSISTANCE</span>
+                <h3 style={styles.modalTitle}>Support Tickets Resolution</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setShowTicketsModal(false)}>
                 ✕
@@ -712,17 +722,18 @@ export default function Admin() {
             <div style={{ ...styles.modalBody, maxHeight: "65vh" }}>
               {ticketsList.length === 0 ? (
                 <div style={styles.messageBox}>
-                  <p style={styles.messageText}>No open incident tickets found.</p>
+                  <p style={styles.messageText}>No support tickets found.</p>
                 </div>
               ) : (
                 <div style={styles.tableWrapper}>
                   <table style={styles.table}>
                     <thead>
                       <tr style={styles.tableHeaderRow}>
-                        <th style={styles.th}>Incident ID</th>
+                        <th style={styles.th}>Ticket ID</th>
+                        <th style={styles.th}>Customer Email</th>
                         <th style={styles.th}>Subject</th>
-                        <th style={styles.th}>Details</th>
-                        <th style={styles.th}>Logged At</th>
+                        <th style={styles.th}>Query Description</th>
+                        <th style={styles.th}>Date</th>
                         <th style={styles.th}>Status</th>
                         <th style={styles.th}>Action</th>
                       </tr>
@@ -741,6 +752,7 @@ export default function Admin() {
                               #TK-{ticket.id}
                             </div>
                           </td>
+                          <td style={styles.td}>{ticket.email || "Not Provided"}</td>
                           <td style={styles.td}>
                             <strong>{ticket.subject}</strong>
                           </td>
@@ -771,7 +783,7 @@ export default function Admin() {
                                 setResolutionText(ticket.resolution || "");
                               }}
                             >
-                              Resolve
+                              Resolve / Reply
                             </button>
                           </td>
                         </tr>
@@ -788,7 +800,7 @@ export default function Admin() {
                 style={styles.modalCloseAction}
                 onClick={() => setShowTicketsModal(false)}
               >
-                Close
+                Close Window
               </button>
             </div>
           </div>
@@ -801,8 +813,8 @@ export default function Admin() {
           <div style={{ ...styles.modalCard, maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>INCIDENT RESPONSE</span>
-                <h3 style={styles.modalTitle}>Ticket #TK-{selectedTicket.id}</h3>
+                <span style={styles.modalEyebrow}>TICKET RESOLUTION</span>
+                <h3 style={styles.modalTitle}>Support Ticket #TK-{selectedTicket.id}</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setSelectedTicket(null)}>
                 ✕
@@ -812,10 +824,10 @@ export default function Admin() {
             <form onSubmit={handleTicketResolutionSubmit} style={styles.modalBody}>
               <div style={styles.modalRouteSummary}>
                 <div style={{ width: "100%" }}>
-                  <small style={styles.modalSubLabel}>CATEGORY SUBJECT</small>
+                  <small style={styles.modalSubLabel}>ISSUE SUBJECT</small>
                   <strong style={{ display: "block", fontSize: "14px", color: "#0f172a" }}>{selectedTicket.subject}</strong>
                   <div style={{ marginTop: "8px" }}>
-                    <small style={styles.modalSubLabel}>CLIENT MESSAGE</small>
+                    <small style={styles.modalSubLabel}>CUSTOMER MESSAGE</small>
                     <p style={{ fontSize: "13px", color: "#334155", margin: "2px 0 0 0", lineHeight: "1.4" }}>
                       {selectedTicket.message}
                     </p>
@@ -824,11 +836,11 @@ export default function Admin() {
               </div>
 
               <div style={styles.inputGroupWrapper}>
-                <label style={styles.fieldLabel}>Formal Resolution Summary</label>
+                <label style={styles.fieldLabel}>Write Resolution Description / Response</label>
                 <textarea
                   required
                   rows="4"
-                  placeholder="Enter the official resolution or response sent to client..."
+                  placeholder="Type the resolution or response for the customer..."
                   value={resolutionText}
                   onChange={(e) => setResolutionText(e.target.value)}
                   style={{ ...styles.dateInput, height: "110px", padding: "10px" }}
@@ -844,7 +856,7 @@ export default function Admin() {
                   Cancel
                 </button>
                 <button type="submit" style={styles.modalActionBtn}>
-                  Confirm Resolution
+                  Submit Response & Resolve
                 </button>
               </div>
             </form>
@@ -852,14 +864,14 @@ export default function Admin() {
         </div>
       )}
 
-      {/* MODAL 5: HELPDESK & SUPPORT */}
+      {/* MODAL 5: CONTACT US */}
       {showContactModal && !chatOpen && (
         <div style={styles.modalOverlay} onClick={() => setShowContactModal(false)}>
           <div style={{ ...styles.modalCard, maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>OPERATIONS SUPPORT</span>
-                <h3 style={styles.modalTitle}>Technical Helpdesk</h3>
+                <span style={styles.modalEyebrow}>24/7 ASSISTANCE</span>
+                <h3 style={styles.modalTitle}>Contact Support</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setShowContactModal(false)}>
                 ✕
@@ -873,8 +885,8 @@ export default function Admin() {
               >
                 <div style={{ fontSize: "28px" }}>🤖</div>
                 <div style={{ textAlign: "left", flex: 1 }}>
-                  <strong style={{ display: "block", fontSize: "15px", color: "#0f172a" }}>System Assistant</strong>
-                  <span style={{ fontSize: "12px", color: "#64748b" }}>Query system records and workflows</span>
+                  <strong style={{ display: "block", fontSize: "15px", color: "#0f172a" }}>Live Chat by Bot</strong>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>Instant answers to admin & platform queries</span>
                 </div>
               </button>
 
@@ -884,8 +896,8 @@ export default function Admin() {
               >
                 <div style={{ fontSize: "28px" }}>📞</div>
                 <div style={{ textAlign: "left", flex: 1 }}>
-                  <strong style={{ display: "block", fontSize: "15px", color: "#0f172a" }}>Executive Hotline</strong>
-                  <span style={{ fontSize: "12px", color: "#64748b" }}>Direct infrastructure support (+91 98765 43210)</span>
+                  <strong style={{ display: "block", fontSize: "15px", color: "#0f172a" }}>Call Helpline</strong>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>Speak directly with technical support (+91 98765 43210)</span>
                 </div>
               </a>
             </div>
@@ -898,7 +910,7 @@ export default function Admin() {
         </div>
       )}
 
-      {/* MODAL 6: SYSTEM ASSISTANT */}
+      {/* MODAL 6: LIVE CHAT BY BOT */}
       {chatOpen && (
         <div
           style={styles.modalOverlay}
@@ -915,8 +927,8 @@ export default function Admin() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "20px" }}>🤖</span>
                 <div>
-                  <h3 style={{ ...styles.modalTitle, fontSize: "16px" }}>GoTrip Assistant</h3>
-                  <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: "700" }}>● Ready</span>
+                  <h3 style={{ ...styles.modalTitle, fontSize: "16px" }}>GoTrip Admin Assistant</h3>
+                  <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: "700" }}>● Online</span>
                 </div>
               </div>
               <button
@@ -952,7 +964,7 @@ export default function Admin() {
               ))}
               {chatLoading && (
                 <div style={{ alignSelf: "flex-start", backgroundColor: "#ffffff", padding: "8px 12px", borderRadius: "12px", fontSize: "12px", color: "#64748b", border: "1px solid #e2e8f0" }}>
-                  Processing request...
+                  Bot is typing...
                 </div>
               )}
             </div>
@@ -960,7 +972,7 @@ export default function Admin() {
             <form onSubmit={handleSendMessage} style={{ padding: "12px 16px", backgroundColor: "#ffffff", borderTop: "1px solid #e2e8f0", display: "flex", gap: "8px" }}>
               <input
                 type="text"
-                placeholder="Ask about reservation verification or workflows..."
+                placeholder="Ask about bookings, pricing, or tickets..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 style={{ flex: 1, height: "40px", padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "13px", outline: "none" }}
@@ -986,7 +998,7 @@ export default function Admin() {
         >
           <div style={{ ...styles.modalCard, maxWidth: "400px", textAlign: "center", padding: "30px 20px" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: "50px", marginBottom: "10px" }}>🎉</div>
-            <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "10px" }}>Update Complete</h3>
+            <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "10px" }}>Success!</h3>
             <p style={{ fontSize: "14px", color: "#475569", marginBottom: "24px", lineHeight: "1.5" }}>
               {successModalMessage}
             </p>
@@ -1000,7 +1012,7 @@ export default function Admin() {
                 if (cb) cb();
               }}
             >
-              Acknowledge
+              Continue
             </button>
           </div>
         </div>
@@ -1012,7 +1024,7 @@ export default function Admin() {
           <div style={{ ...styles.modalCard, maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <span style={styles.modalEyebrow}>RESERVATION AUDIT</span>
+                <span style={styles.modalEyebrow}>PAYMENT & BOOKING VERIFICATION</span>
                 <h3 style={styles.modalTitle}>{selectedBooking.booking_reference}</h3>
               </div>
               <button type="button" style={styles.closeModalBtn} onClick={() => setSelectedBooking(null)}>
@@ -1031,7 +1043,7 @@ export default function Admin() {
                   <strong style={{ color: "#2563eb" }}>{formatDateTime(selectedBooking.travel_date)}</strong>
                 </div>
                 <div>
-                  <small style={styles.modalSubLabel}>ITINERARY ROUTE</small>
+                  <small style={styles.modalSubLabel}>ROUTE</small>
                   <strong>{selectedBooking.from_location} → {selectedBooking.to_location}</strong>
                 </div>
               </div>
@@ -1039,26 +1051,26 @@ export default function Admin() {
               {/* PAYMENT VERIFICATION PROOF AUDIT */}
               <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", padding: "16px", borderRadius: "12px" }}>
                 <span style={{ fontSize: "11px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
-                  💳 Advance Payment Audit (UPI Proof)
+                  💳 Advance UPI Payment Verification Proof
                 </span>
                 {loadingProof ? (
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Validating transaction record...</p>
+                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Loading payment proof...</p>
                 ) : effectiveUtr ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#1e293b" }}>
                     <div>
-                      <strong>Deposit Amount:</strong> {effectiveAmount ? `₹${effectiveAmount}` : "Predefined Advance"}
+                      <strong>Amount Paid:</strong> {effectiveAmount ? `₹${effectiveAmount}` : "200/150"}
                     </div>
                     <div>
-                      <strong>Beneficiary UPI:</strong> {effectiveUpi}
+                      <strong>Target UPI ID:</strong> {effectiveUpi}
                     </div>
                     <div>
-                      <strong>Transaction Ref / UTR:</strong>{" "}
+                      <strong>Transaction UTR / ID:</strong>{" "}
                       <span style={{ backgroundColor: "#dbeafe", padding: "2px 8px", borderRadius: "4px", fontWeight: "700", color: "#1e40af", letterSpacing: "0.5px" }}>
                         {effectiveUtr}
                       </span>
                     </div>
                     <div>
-                      <strong>Verification Status:</strong>{" "}
+                      <strong>Payment Status:</strong>{" "}
                       <span
                         style={{
                           textTransform: "uppercase",
@@ -1072,13 +1084,13 @@ export default function Admin() {
                   </div>
                 ) : (
                   <p style={{ fontSize: "13px", color: "#dc2626", margin: 0 }}>
-                    No payment reference or UTR documented for this reservation.
+                    No payment verification record linked yet.
                   </p>
                 )}
               </div>
 
               <div style={{ backgroundColor: "#f8fafc", padding: "12px 16px", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>Reservation Status:</span>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>Booking Status:</span>
                 <select
                   className={`status-select ${statusClass(selectedBooking.status)}`}
                   value={selectedBooking.status || "pending"}
@@ -1090,7 +1102,7 @@ export default function Admin() {
                   style={styles.inlineStatusSelect}
                 >
                   <option value="pending">⏳ Pending Review</option>
-                  <option value="confirmed">✓ Confirmed & Verified</option>
+                  <option value="confirmed">✓ Confirmed</option>
                   <option value="cancelled">✕ Cancelled</option>
                 </select>
               </div>
@@ -1098,18 +1110,18 @@ export default function Admin() {
               <div style={styles.modalInfoGrid}>
                 <div style={styles.modalInfoItem}>
                   <span>Customer Name</span>
-                  <strong>{selectedBooking.customer_name || selectedBooking.name || "Guest User"}</strong>
+                  <strong>{selectedBooking.customer_name || selectedBooking.name || "Customer"}</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
-                  <span>Contact Number</span>
+                  <span>Mobile Contact</span>
                   <strong>{selectedBooking.mobile || "-"}</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
-                  <span>Assigned Fleet</span>
+                  <span>Vehicle Category</span>
                   <strong>{selectedBooking.vehicle_type}</strong>
                 </div>
                 <div style={styles.modalInfoItem}>
-                  <span>Distance Total</span>
+                  <span>Total Distance</span>
                   <strong>{Number(selectedBooking.distance_km || 0).toFixed(0)} KM</strong>
                 </div>
               </div>
@@ -1121,7 +1133,7 @@ export default function Admin() {
                 style={styles.modalCloseAction}
                 onClick={() => setSelectedBooking(null)}
               >
-                Close
+                Close Window
               </button>
             </div>
           </div>
