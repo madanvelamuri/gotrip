@@ -3,10 +3,22 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// Database connection
+// ========================================
+// LOAD ENVIRONMENT VARIABLES
+// ========================================
+
+dotenv.config();
+
+// ========================================
+// DATABASE CONNECTION
+// ========================================
+
 import pool from "./db.js";
 
-// API routes
+// ========================================
+// API ROUTES
+// ========================================
+
 import authRoutes from "./routes/auth.js";
 import pricingRoutes from "./routes/pricing.js";
 import bookingRoutes from "./routes/bookings.js";
@@ -15,7 +27,9 @@ import locationRoutes from "./routes/locations.js";
 import supportRoutes from "./routes/support.js";
 import paymentRoutes from "./routes/payments.js";
 
-dotenv.config();
+// ========================================
+// INITIALIZE EXPRESS
+// ========================================
 
 const app = express();
 
@@ -39,18 +53,26 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests without an Origin header
-      // (for example, health checks and server-to-server calls).
-      if (!origin || allowedOrigins.includes(origin)) {
+    origin: function (origin, callback) {
+      // Allow requests without Origin header
+      if (!origin) {
         return callback(null, true);
       }
 
+      // Check allowed frontend origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.error("CORS blocked:", origin);
+
       return callback(
-        new Error(`CORS blocked for origin: ${origin}`)
+        new Error("CORS blocked for origin: " + origin)
       );
     },
+
     credentials: true,
+
     methods: [
       "GET",
       "POST",
@@ -59,6 +81,7 @@ app.use(
       "DELETE",
       "OPTIONS",
     ],
+
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -71,16 +94,26 @@ app.use(
 // ========================================
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
 
 // ========================================
 // REQUEST LOGGER
 // ========================================
 
-app.use((req, res, next) => {
-  console.log(
-    `${new Date().toISOString()} | ${req.method} ${req.originalUrl}`
-  );
+app.use(function (req, res, next) {
+  const logMessage =
+    new Date().toISOString() +
+    " | " +
+    req.method +
+    " " +
+    req.originalUrl;
+
+  console.log(logMessage);
 
   next();
 });
@@ -91,19 +124,24 @@ app.use((req, res, next) => {
 
 app.get("/", async (req, res) => {
   try {
-    // Check database connectivity
     await pool.query("SELECT 1");
 
     return res.status(200).json({
+      success: true,
       name: "GoTrip API",
       status: "running",
       database: "connected",
       timestamp: new Date().toISOString(),
     });
+
   } catch (error) {
-    console.error("DATABASE HEALTH CHECK FAILED:", error.message);
+    console.error(
+      "DATABASE HEALTH CHECK FAILED:",
+      error.message
+    );
 
     return res.status(503).json({
+      success: false,
       name: "GoTrip API",
       status: "running",
       database: "disconnected",
@@ -116,26 +154,40 @@ app.get("/", async (req, res) => {
 // API ROUTES
 // ========================================
 
+// Authentication API
 app.use("/api/auth", authRoutes);
 
+// Pricing API
 app.use("/api/pricing", pricingRoutes);
 
+// Booking API
 app.use("/api/bookings", bookingRoutes);
 
+// Payment API
 app.use("/api/payments", paymentRoutes);
 
+// Admin API
 app.use("/api/admin", adminRoutes);
 
+// Location and Distance API
 app.use("/api/locations", locationRoutes);
 
+// Support API
 app.use("/api/support", supportRoutes);
 
 // ========================================
-// API NOT FOUND
+// API NOT FOUND HANDLER
 // ========================================
 
 app.use((req, res) => {
+  console.error(
+    "404 NOT FOUND:",
+    req.method,
+    req.originalUrl
+  );
+
   return res.status(404).json({
+    success: false,
     message: "API endpoint not found",
     path: req.originalUrl,
   });
@@ -155,14 +207,16 @@ app.use((error, req, res, next) => {
     return next(error);
   }
 
-  // CORS errors
+  // Handle CORS errors
   if (error.message.startsWith("CORS blocked")) {
     return res.status(403).json({
+      success: false,
       message: "CORS policy blocked this request",
     });
   }
 
   return res.status(500).json({
+    success: false,
     message: "Internal server error",
   });
 });
@@ -175,11 +229,28 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("=================================");
   console.log("          GOTRIP API");
   console.log("=================================");
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+
+  console.log("Server running on port " + PORT);
+
+  console.log(
+    "Environment: " +
+    (process.env.NODE_ENV || "development")
+  );
+
   console.log("CORS enabled");
-  console.log("API routes registered");
+  console.log("Authentication routes registered");
+  console.log("Pricing routes registered");
+  console.log("Booking routes registered");
+  console.log("Payment routes registered");
+  console.log("Admin routes registered");
+  console.log("Location routes registered");
+  console.log("Support routes registered");
+
   console.log("=================================");
 });
+
+// ========================================
+// EXPORT APP
+// ========================================
 
 export default app;
