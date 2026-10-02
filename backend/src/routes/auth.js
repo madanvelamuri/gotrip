@@ -321,5 +321,126 @@ router.post("/signin", async (req, res) => {
     });
   }
 });
+// Store temporary password reset requests
+const pendingResets = new Map();
+
+/*
+=========================================
+FORGOT PASSWORD - STEP 1: SEND RESET CODE
+=========================================
+*/
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid email address is required.",
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const userResult = await pool.query(
+      `SELECT id, email FROM users WHERE email = $1 LIMIT 1`,
+      [cleanEmail]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found with this email address.",
+      });
+    }
+
+    const code = generateOTP();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // Expires in 10 minutes
+
+    pendingResets.set(cleanEmail, { code, expiresAt });
+
+    console.log(`\n==================================================`);
+    console.log(`🔑 [PASSWORD RESET CODE] For ${cleanEmail}: ${code}`);
+    console.log(`==================================================\n`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset code generated (check terminal logs).",
+    });
+
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ success: false, message: "Server error while processing request." });
+  }
+});
+
+/*
+=========================================
+FORGOT PASSWORD - STEP 2: VERIFY & UPDATE PASSWORD
+=========================================
+*/
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, reset code, and new password are required.",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must contain at least 6 characters.",
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = String(code).trim();
+    const resetRecord = pendingResets.get(cleanEmail);
+
+    if (!resetRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "No active password reset request found. Please request a new code.",
+      });
+    }
+
+    if (Date.now() > resetRecord.expiresAt) {
+      pendingResets.delete(cleanEmail);
+      return res.status(400).json({
+        success: false,
+        message: "Reset code has expired. Please request a new one.",
+      });
+    }
+
+    if (resetRecord.code !== cleanCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset code. Please check and try again.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await pool.query(
+      `UPDATE users SET password_hash = $1 WHERE email = $2`,
+      [passwordHash, cleanEmail]
+    );
+
+    pendingResets.delete(cleanEmail);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. You can now sign in with your new password.",
+    });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({ success: false, message: "Server error during password reset." });
+  }
+});
 
 export default router;

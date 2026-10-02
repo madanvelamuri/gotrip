@@ -5,14 +5,20 @@ import API from "../services/api";
 export default function SignIn() {
   const navigate = useNavigate();
 
+  const [view, setView] = useState("signin"); // "signin" | "forgot" | "reset"
   const [loginInput, setLoginInput] = useState("");
   const [password, setPassword] = useState("");
+
+  // Forgot Password States
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Direct Sign-In Handler (No OTP step)
+  // Sign In Handler
   const handleSignIn = async (e) => {
     e.preventDefault();
     setError("");
@@ -50,16 +56,78 @@ export default function SignIn() {
       localStorage.setItem("user", JSON.stringify(normalizedUser));
 
       setSuccessMsg("Sign in successful! Redirecting...");
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1000);
+      setTimeout(() => navigate("/dashboard"), 1000);
 
     } catch (err) {
       console.error("Sign-in error:", err);
-      setError(
-        err.response?.data?.message ||
-        "Invalid email/mobile or password. Please try again."
-      );
+      setError(err.response?.data?.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 1: Request Password Reset Code
+  const handleRequestReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!resetEmail.trim() || !resetEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await API.post("/auth/forgot-password", { email: resetEmail.trim() });
+      setSuccessMsg(response.data.message || "Reset code generated.");
+      setView("reset");
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      setError(err.response?.data?.message || "Failed to process request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Submit Reset Code and New Password
+  const handleConfirmReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!resetCode.trim() || !newPassword) {
+      setError("Please enter the reset code and your new password.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await API.post("/auth/reset-password", {
+        email: resetEmail.trim(),
+        code: resetCode.trim(),
+        newPassword: newPassword,
+      });
+
+      setSuccessMsg(response.data.message);
+      setTimeout(() => {
+        setView("signin");
+        setSuccessMsg("");
+        setResetEmail("");
+        setResetCode("");
+        setNewPassword("");
+      }, 2000);
+
+    } catch (err) {
+      console.error("Reset password error:", err);
+      setError(err.response?.data?.message || "Failed to reset password.");
     } finally {
       setLoading(false);
     }
@@ -74,63 +142,155 @@ export default function SignIn() {
           <div style={{ ...styles.authLogo, cursor: "pointer" }} onClick={() => navigate("/")}>
             Go<span style={styles.logoSpan}>Trip</span>
           </div>
-          <h1 style={styles.h1}>Welcome Back</h1>
-          <p style={styles.p}>Sign in securely with your email/mobile and password</p>
+          <h1 style={styles.h1}>
+            {view === "signin" && "Welcome Back"}
+            {view === "forgot" && "Reset Password"}
+            {view === "reset" && "Enter New Password"}
+          </h1>
+          <p style={styles.p}>
+            {view === "signin" && "Sign in securely with your email/mobile and password"}
+            {view === "forgot" && "Enter your email to receive a password reset code"}
+            {view === "reset" && `Enter the code sent to ${resetEmail}`}
+          </p>
         </div>
 
-        {/* ERROR / SUCCESS ALERTS */}
+        {/* ALERTS */}
         {error && <div style={styles.error}>{error}</div>}
         {successMsg && <div style={styles.success}>{successMsg}</div>}
 
-        {/* SIGN IN FORM */}
-        <form onSubmit={handleSignIn}>
-          <label style={styles.label}>Email Address or Mobile Number</label>
-          <input
-            style={styles.input}
-            type="text"
-            placeholder="name@example.com or mobile"
-            value={loginInput}
-            onChange={(e) => setLoginInput(e.target.value)}
-            disabled={loading}
-            autoComplete="username"
-            autoFocus
-          />
+        {/* VIEW 1: SIGN IN FORM */}
+        {view === "signin" && (
+          <form onSubmit={handleSignIn}>
+            <label style={styles.label}>Email Address or Mobile Number</label>
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="name@example.com or mobile"
+              value={loginInput}
+              onChange={(e) => setLoginInput(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
 
-          <label style={styles.label}>Password</label>
-          <input
-            style={styles.input}
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            autoComplete="current-password"
-          />
+            <label style={styles.label}>Password</label>
+            <input
+              style={styles.input}
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
 
-          <button
-            type="submit"
-            style={{
-              ...styles.primaryButton,
-              ...(loading ? styles.buttonDisabled : {}),
-            }}
-            disabled={loading}
-          >
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
+            <div style={styles.forgotContainer}>
+              <button
+                type="button"
+                style={styles.textButton}
+                onClick={() => {
+                  setView("forgot");
+                  setError("");
+                  setSuccessMsg("");
+                }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            <button type="submit" style={styles.primaryButton} disabled={loading}>
+              {loading ? "Signing In..." : "Sign In"}
+            </button>
+          </form>
+        )}
+
+        {/* VIEW 2: FORGOT PASSWORD REQUEST FORM */}
+        {view === "forgot" && (
+          <form onSubmit={handleRequestReset}>
+            <label style={styles.label}>Registered Email Address</label>
+            <input
+              style={styles.input}
+              type="email"
+              placeholder="name@example.com"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
+
+            <button type="submit" style={styles.primaryButton} disabled={loading}>
+              {loading ? "Sending Code..." : "Send Reset Code"}
+            </button>
+
+            <button
+              type="button"
+              style={styles.backButton}
+              onClick={() => {
+                setView("signin");
+                setError("");
+                setSuccessMsg("");
+              }}
+            >
+              ← Back to Sign In
+            </button>
+          </form>
+        )}
+
+        {/* VIEW 3: CONFIRM RESET & NEW PASSWORD FORM */}
+        {view === "reset" && (
+          <form onSubmit={handleConfirmReset}>
+            <label style={styles.label}>6-Digit Reset Code</label>
+            <input
+              style={{ ...styles.input, textAlign: "center", letterSpacing: "4px", fontWeight: "700" }}
+              type="text"
+              maxLength="6"
+              placeholder="123456"
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
+
+            <label style={styles.label}>New Password</label>
+            <input
+              style={styles.input}
+              type="password"
+              placeholder="At least 6 characters"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <button type="submit" style={styles.primaryButton} disabled={loading}>
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+
+            <button
+              type="button"
+              style={styles.backButton}
+              onClick={() => {
+                setView("forgot");
+                setError("");
+                setSuccessMsg("");
+              }}
+            >
+              ← Resend Code / Change Email
+            </button>
+          </form>
+        )}
 
         {/* SIGN UP SWITCH */}
-        <div style={styles.authSwitch}>
-          <span style={styles.switchText}>Don't have an account?</span>
-          <button
-            type="button"
-            style={styles.switchButton}
-            onClick={() => navigate("/signup")}
-            disabled={loading}
-          >
-            Sign Up
-          </button>
-        </div>
+        {view === "signin" && (
+          <div style={styles.authSwitch}>
+            <span style={styles.switchText}>Don't have an account?</span>
+            <button
+              type="button"
+              style={styles.switchButton}
+              onClick={() => navigate("/signup")}
+              disabled={loading}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
@@ -222,6 +382,32 @@ const styles = {
     outline: "none",
     backgroundColor: "#f8fafc",
   },
+  forgotContainer: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: "16px",
+    marginTop: "-8px",
+  },
+  textButton: {
+    background: "none",
+    border: "none",
+    color: "#2563eb",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    padding: "0",
+  },
+  backButton: {
+    background: "none",
+    border: "none",
+    color: "#2563eb",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    width: "100%",
+    textAlign: "center",
+    marginTop: "12px",
+  },
   primaryButton: {
     width: "100%",
     padding: "12px",
@@ -233,11 +419,6 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
-    marginTop: "6px",
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-    cursor: "not-allowed",
   },
   authSwitch: {
     marginTop: "24px",
