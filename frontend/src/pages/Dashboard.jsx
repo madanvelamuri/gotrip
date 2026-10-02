@@ -407,13 +407,15 @@ export default function Dashboard() {
     <div style={styles.dashboardPage}>
 
       {/* =========================
-          NAVIGATION HEADER
+          NAVIGATION HEADER (CLEAN & SPACIOUS)
       ========================= */}
       <header style={styles.dashboardNav}>
         <div style={styles.navContainer}>
-          <strong style={styles.navLogo}>
-            Go<span style={styles.logoSpan}>Trip</span>
-          </strong>
+          <div style={styles.navBrandArea}>
+            <strong style={styles.navLogo}>
+              Go<span style={styles.logoSpan}>Trip</span>
+            </strong>
+          </div>
 
           <div style={styles.navRight}>
             <div style={styles.userBadge}>
@@ -506,7 +508,7 @@ export default function Dashboard() {
               style={styles.navButton}
               onClick={() => setShowContactModal(true)}
             >
-              📞 Contact Us
+              📞 Contact
             </button>
 
             <button
@@ -858,7 +860,7 @@ export default function Dashboard() {
 
 
       {/* =========================
-          BOOKING GUIDELINES MODAL (REVERTED TO OLD DATA)
+          BOOKING GUIDELINES MODAL
       ========================= */}
       {showInstructionsModal && (
         <div style={styles.modalOverlay}>
@@ -913,7 +915,7 @@ export default function Dashboard() {
 
 
       {/* =========================
-          TERMS & CONDITIONS MODAL (REVERTED TO OLD DATA)
+          TERMS & CONDITIONS MODAL
       ========================= */}
       {showTermsModal && (
         <div style={styles.modalOverlay}>
@@ -1266,7 +1268,7 @@ export default function Dashboard() {
 }
 
 
-// Professional styling layout rules with modern gradients and fun UI enhancements
+// Professional layout styles with a clean, uncrowded header layout
 const styles = {
   dashboardPage: {
     minHeight: "100vh",
@@ -1275,23 +1277,24 @@ const styles = {
     color: "#1e293b",
   },
   dashboardNav: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(10px)",
     borderBottom: "1px solid #e2e8f0",
-    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.02)",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
     position: "sticky",
     top: 0,
     zIndex: 100,
   },
   navContainer: {
-    maxWidth: "1280px",
+    maxWidth: "1400px",
     margin: "0 auto",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px 24px",
-    flexWrap: "wrap",
-    gap: "12px",
+    padding: "12px 28px",
+  },
+  navBrandArea: {
+    flexShrink: 0,
   },
   navLogo: {
     fontSize: "26px",
@@ -1305,64 +1308,68 @@ const styles = {
   navRight: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    flexWrap: "wrap",
+    gap: "8px",
   },
   userBadge: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "6px",
     backgroundColor: "#f1f5f9",
-    padding: "6px 14px",
+    padding: "6px 12px",
     borderRadius: "20px",
     border: "1px solid #e2e8f0",
+    marginRight: "4px",
   },
   userAvatar: {
-    fontSize: "14px",
+    fontSize: "13px",
   },
   welcomeText: {
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "700",
     color: "#334155",
+    whiteSpace: "nowrap",
   },
   navButton: {
     backgroundColor: "#ffffff",
-    color: "#334155",
+    color: "#475569",
     border: "1px solid #cbd5e1",
-    padding: "8px 14px",
-    borderRadius: "10px",
-    fontSize: "13px",
+    padding: "7px 12px",
+    borderRadius: "8px",
+    fontSize: "12px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "all 0.15s ease",
+    whiteSpace: "nowrap",
   },
   adminButton: {
     backgroundColor: "#fef3c7",
     color: "#b45309",
     border: "1px solid #fde68a",
-    padding: "8px 14px",
-    borderRadius: "10px",
-    fontSize: "13px",
+    padding: "7px 12px",
+    borderRadius: "8px",
+    fontSize: "12px",
     fontWeight: "700",
     cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   logoutButton: {
     backgroundColor: "#fef2f2",
     color: "#dc2626",
     border: "1px solid #fee2e2",
-    padding: "8px 14px",
-    borderRadius: "10px",
-    fontSize: "13px",
+    padding: "7px 12px",
+    borderRadius: "8px",
+    fontSize: "12px",
     fontWeight: "700",
     cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   notificationBadge: {
-    marginLeft: "6px",
+    marginLeft: "5px",
     backgroundColor: "#dc2626",
     color: "#fff",
-    padding: "2px 6px",
+    padding: "2px 5px",
     borderRadius: "50%",
-    fontSize: "10px",
+    fontSize: "9px",
     fontWeight: "bold",
   },
   notificationDropdown: {
@@ -1580,7 +1587,6 @@ const styles = {
     boxShadow: "0 6px 20px rgba(37, 99, 235, 0.4)",
     width: "100%",
     marginTop: "8px",
-    transition: "transform 0.15s ease, background-color 0.15s ease",
   },
   fullButton: {
     marginTop: "20px",
@@ -1698,7 +1704,6 @@ const styles = {
     boxShadow: "0 15px 35px rgba(0, 0, 0, 0.05)",
     display: "flex",
     flexDirection: "column",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   },
   cardHeaderTop: {
     display: "flex",
@@ -1874,11 +1879,6 @@ const styles = {
     borderTop: "1px solid #e2e8f0",
     backgroundColor: "#f8fafc",
     display: "flex",
-    justifyContent: "flex-end",
-  },
-  modalFooterButtons: {
-    display: "flex",
-    gap: "10px",
     justifyContent: "flex-end",
   },
   modalActionBtn: {
