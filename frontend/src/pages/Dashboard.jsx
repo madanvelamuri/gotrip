@@ -1405,14 +1405,14 @@ const styles = {
   notificationDropdown: {
     position: "absolute",
     right: 0,
-    top: "45px",
+    top: "calc(100% + 10px)",
     width: "340px",
     backgroundColor: "#ffffff",
     border: "1px solid #cbd5e1",
     borderRadius: "14px",
-    boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.18)",
     padding: "16px",
-    zIndex: 1000,
+    zIndex: 9999,
   },
   alertHeaderRow: {
     display: "flex",
