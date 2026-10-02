@@ -1405,7 +1405,7 @@ const styles = {
   notificationDropdown: {
     position: "absolute",
     right: 0,
-    top: "calc(100% + 10px)",
+    top: "calc(100% + 12px)",
     width: "340px",
     backgroundColor: "#ffffff",
     border: "1px solid #cbd5e1",
