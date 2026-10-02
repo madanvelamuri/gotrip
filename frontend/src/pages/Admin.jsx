@@ -174,6 +174,17 @@ export default function Admin() {
     }
   };
 
+  const updatePaymentStatus = async (bookingId, paymentStatus) => {
+    try {
+      await API.patch(`/admin/bookings/${bookingId}/payment-status`, { status: paymentStatus });
+      setPaymentProof(prev => prev ? { ...prev, status: paymentStatus } : { status: paymentStatus });
+      setSuccessModalMessage("Payment status updated successfully.");
+      await loadBookings();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update payment status");
+    }
+  };
+
   const updatePrice = async (pricingId) => {
     const price = Number(newPrice);
     if (!price || price <= 0) {
@@ -1056,7 +1067,7 @@ export default function Admin() {
                 {loadingProof ? (
                   <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Loading payment proof...</p>
                 ) : effectiveUtr ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px", color: "#1e293b" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: "#1e293b" }}>
                     <div>
                       <strong>Amount Paid:</strong> {effectiveAmount ? `₹${effectiveAmount}` : "200/150"}
                     </div>
@@ -1069,17 +1080,21 @@ export default function Admin() {
                         {effectiveUtr}
                       </span>
                     </div>
-                    <div>
-                      <strong>Payment Status:</strong>{" "}
-                      <span
-                        style={{
-                          textTransform: "uppercase",
-                          fontWeight: "700",
-                          color: effectivePaymentStatus === "verified" ? "#16a34a" : "#ca8a04"
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px", paddingTop: "8px", borderTop: "1px solid #bfdbfe" }}>
+                      <strong>Payment Status:</strong>
+                      <select
+                        className={`status-select ${statusClass(effectivePaymentStatus)}`}
+                        value={effectivePaymentStatus || "pending"}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value;
+                          await updatePaymentStatus(selectedBooking.id, newStatus);
                         }}
+                        style={styles.inlineStatusSelect}
                       >
-                        {effectivePaymentStatus}
-                      </span>
+                        <option value="pending">⏳ Pending</option>
+                        <option value="verified">✓ Verified</option>
+                        <option value="rejected">✕ Rejected</option>
+                      </select>
                     </div>
                   </div>
                 ) : (
