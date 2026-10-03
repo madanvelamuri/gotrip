@@ -1,6 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
+// Fallback popular locations to ensure instant suggestions if Nominatim rate-limits (429)
+const POPULAR_LOCATIONS = [
+  "Bengaluru, Karnataka, India",
+  "Chennai, Tamil Nadu, India",
+  "Hyderabad, Telangana, India",
+  "Mumbai, Maharashtra, India",
+  "New Delhi, Delhi, India",
+  "Pune, Maharashtra, India",
+  "Kolkata, West Bengal, India",
+  "Hosur, Krishnagiri, Tamil Nadu, India",
+  "Kavali, Sri Potti Sriramulu Nellore, Andhra Pradesh, India"
+];
+
 export default function LocationInput({ 
   label, 
   value, 
@@ -34,7 +47,7 @@ export default function LocationInput({
     };
   }, []);
 
-  // Fetch precise locations in India matching user typing
+  // Fetch precise locations in India matching user typing with rate-limit protection
   useEffect(() => {
     if (currentLocationOnly || !query.trim() || query.length < 2) {
       setOnlineSuggestions([]);
@@ -48,16 +61,21 @@ export default function LocationInput({
         setIsSearchingOnline(true);
         const response = await axios.get(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=in&limit=5`,
-          { headers: { "User-Agent": "GoTripCabBookingApp/1.0" } }
+          { headers: { "User-Agent": "GoTripCabBookingApp/2.0" }, timeout: 3500 }
         );
 
-        if (response.data && Array.isArray(response.data)) {
-          // Use full clean display names to ensure accuracy for villages, towns, and cities
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
           const formattedLocations = response.data.map((item) => item.display_name);
           setOnlineSuggestions([...new Set(formattedLocations)]);
+        } else {
+          // Fallback to filtering popular locations if API returns empty
+          const filtered = POPULAR_LOCATIONS.filter(loc => loc.toLowerCase().includes(query.toLowerCase()));
+          setOnlineSuggestions(filtered);
         }
       } catch (error) {
-        console.error("Error fetching suggestions:", error);
+        // Fallback gracefully on 429 rate-limit or network timeout
+        const filtered = POPULAR_LOCATIONS.filter(loc => loc.toLowerCase().includes(query.toLowerCase()));
+        setOnlineSuggestions(filtered.length > 0 ? filtered : [query + ", India"]);
       } finally {
         setIsSearchingOnline(false);
       }
@@ -80,7 +98,7 @@ export default function LocationInput({
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      alert("Geolocation is not supported by your browser.");
       return;
     }
 
@@ -93,7 +111,7 @@ export default function LocationInput({
         try {
           const response = await axios.get(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-            { headers: { "User-Agent": "GoTripCabBookingApp/1.0" } }
+            { headers: { "User-Agent": "GoTripCabBookingApp/2.0" }, timeout: 4000 }
           );
 
           const detectedPlace = response.data?.display_name || "Current Location";
@@ -102,7 +120,10 @@ export default function LocationInput({
           setIsOpen(false);
         } catch (error) {
           console.error("Reverse geocoding error:", error);
-          alert("Could not detect exact location name.");
+          const fallbackCoordsText = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+          setQuery(fallbackCoordsText);
+          onChange(fallbackCoordsText);
+          setIsOpen(false);
         } finally {
           setLoadingLocation(false);
         }
@@ -128,7 +149,7 @@ export default function LocationInput({
           value={query}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
-          placeholder={placeholder || "Enter location..."}
+          placeholder={placeholder || "Enter location or address..."}
           autoComplete="off"
         />
       </div>
@@ -144,7 +165,7 @@ export default function LocationInput({
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
               >
                 <span style={styles.gpsIcon}>🎯</span>
-                <span>{loadingLocation ? "Detecting location..." : "Use Current Location"}</span>
+                <span>{loadingLocation ? "Detecting current coordinates..." : "Use Current GPS Location"}</span>
               </li>
               
               {!currentLocationOnly && <div style={styles.divider}></div>}
@@ -153,7 +174,7 @@ export default function LocationInput({
 
           {!currentLocationOnly && (
             isSearchingOnline ? (
-              <li style={styles.loadingItem}>Searching locations in India...</li>
+              <li style={styles.loadingItem}>Searching locations...</li>
             ) : onlineSuggestions.length > 0 ? (
               onlineSuggestions.map((item, index) => (
                 <li
@@ -167,9 +188,14 @@ export default function LocationInput({
                 </li>
               ))
             ) : query.length >= 2 ? (
-              <li style={styles.noResultItem}>No matching locations found in India</li>
+              <li
+                style={styles.dropdownItem}
+                onClick={() => handleSelectLocation(query)}
+              >
+                📍 Use custom address: "{query}"
+              </li>
             ) : (
-              <li style={styles.noResultItem}>Type any village, town, or city...</li>
+              <li style={styles.noResultItem}>Type any city, town, or address...</li>
             )
           )}
         </ul>
