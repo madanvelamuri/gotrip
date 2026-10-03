@@ -3,6 +3,20 @@ import axios from "axios";
 
 const router = express.Router();
 
+// Fallback dictionary for common Indian locations to bypass Nominatim 429 rate limits
+const COMMON_LOCATIONS = {
+  "bengaluru": { lat: 12.9716, lng: 77.5946 },
+  "bangalore": { lat: 12.9716, lng: 77.5946 },
+  "hosur": { lat: 12.7409, lng: 77.8251 },
+  "kavali": { lat: 14.9132, lng: 79.9925 },
+  "chennai": { lat: 13.0827, lng: 80.2707 },
+  "hyderabad": { lat: 17.3850, lng: 78.4867 },
+  "mumbai": { lat: 19.0760, lng: 72.8777 },
+  "delhi": { lat: 28.6139, lng: 77.2090 },
+  "pune": { lat: 18.5204, lng: 73.8567 },
+  "kolkata": { lat: 22.5726, lng: 88.3639 }
+};
+
 // Helper to calculate straight-line distance using Haversine formula as a reliable fallback
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth radius in KM
@@ -18,12 +32,22 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return Math.round(straightLineKm * 1.25);
 }
 
-// Helper to get exact coordinates for any Indian village, town, city, or state
+// Helper to get coordinates with 429 rate limit protection
 async function getCoords(locationName) {
+  const cleanName = locationName.toLowerCase().trim();
+
+  // Check built-in directory first to prevent 429 rate-limiting
+  for (const [key, coords] of Object.entries(COMMON_LOCATIONS)) {
+    if (cleanName.includes(key)) {
+      return coords;
+    }
+  }
+
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&countrycodes=in&limit=1`;
     const response = await axios.get(url, {
-      headers: { "User-Agent": "GoTripCabBookingApp/1.0" }
+      headers: { "User-Agent": "GoTripCabBookingApp/1.0" },
+      timeout: 4000
     });
     
     if (response.data && response.data.length > 0) {
@@ -34,7 +58,7 @@ async function getCoords(locationName) {
     }
     return null;
   } catch (error) {
-    console.error("Geocoding lookup error:", error.message);
+    console.warn("Geocoding lookup warning (likely 429 rate limit):", error.message);
     return null;
   }
 }
